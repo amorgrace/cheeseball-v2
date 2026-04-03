@@ -2,6 +2,7 @@ from asgiref.sync import sync_to_async
 from django.contrib.auth import authenticate, get_user_model
 from ninja.responses import Response
 from ninja_jwt.tokens import RefreshToken
+from django.http import JsonResponse
 
 from .schemas import LoginSchema, RefreshTokenInput, RegisterSchema
 
@@ -39,6 +40,7 @@ async def login_user(request, payload: LoginSchema):
     return {
         "access": str(refresh.access_token),
         "refresh": str(refresh),
+        "message": "Login successful",
     }
 
 
@@ -60,3 +62,7 @@ async def logout_user(payload: RefreshTokenInput):
         return {"message": "Logged out successfully"}
     except Exception:
         return Response({"detail": "Invalid token"}, status=400)
+
+
+async def reset_password(request):
+    return JsonResponse({"message": "test"})

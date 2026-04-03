@@ -36,6 +36,11 @@ class LoginSchema(Schema):
 class TokenSchema(Schema):
     access: str
     refresh: str
+    message: str | None = None
+
+
+class RefreshTokenInput(Schema):
+    refresh_token: str
 
 
 class MessageSchema(Schema):

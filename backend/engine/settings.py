@@ -73,7 +73,10 @@ INSTALLED_APPS = [
 
     "ninja_jwt",
     "ninja_jwt.token_blacklist", 
-    "authenticator"
+    "authenticator",
+    "rates",
+    "broker",
+    "payments",
 ]
 
 AUTH_USER_MODEL = "authenticator.CustomUser"
@@ -101,6 +104,8 @@ MIDDLEWARE = [
 
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 
 ROOT_URLCONF = 'engine.urls'
@@ -166,3 +171,28 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+BINANCE_PRICE_URL_TEMPLATE = os.getenv(
+    "BINANCE_PRICE_URL_TEMPLATE",
+    "https://api.binance.com/api/v3/ticker/price?symbol={symbol}",
+)
+BTC_NGN_RATE_FALLBACK = os.getenv("BTC_NGN_RATE_FALLBACK", "150000000")
+ETH_NGN_RATE_FALLBACK = os.getenv("ETH_NGN_RATE_FALLBACK", "5000000")
+USDT_NGN_RATE_FALLBACK = os.getenv("USDT_NGN_RATE_FALLBACK", "1600")
+USD_NGN_EXCHANGE_RATE = os.getenv("USD_NGN_EXCHANGE_RATE", "1600")
+BUY_MARKUP_PERCENT = os.getenv("BUY_MARKUP_PERCENT", "3.0")
+SELL_MARKUP_PERCENT = os.getenv("SELL_MARKUP_PERCENT", "2.0")
+QUOTE_TTL_MINUTES = int(os.getenv("QUOTE_TTL_MINUTES", "10"))
+
+PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY", "")
+PAYSTACK_PUBLIC_KEY = os.getenv("PAYSTACK_PUBLIC_KEY", "")
+PAYSTACK_WEBHOOK_SECRET = os.getenv("PAYSTACK_WEBHOOK_SECRET", PAYSTACK_SECRET_KEY)
+
+BANK_ACCOUNT_NAME = os.getenv("BANK_ACCOUNT_NAME", "CheeseBall Limited")
+BANK_ACCOUNT_NUMBER = os.getenv("BANK_ACCOUNT_NUMBER", "0000000000")
+BANK_NAME = os.getenv("BANK_NAME", "Demo Bank")
+BROKER_BTC_WALLET_ADDRESS = os.getenv("BROKER_BTC_WALLET_ADDRESS", "")
+BROKER_ETH_WALLET_ADDRESS = os.getenv("BROKER_ETH_WALLET_ADDRESS", "")
+BROKER_USDT_WALLET_ADDRESS = os.getenv("BROKER_USDT_WALLET_ADDRESS", "")

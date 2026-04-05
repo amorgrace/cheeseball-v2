@@ -1,19 +1,38 @@
 from ninja import Router
-from ninja_jwt.authentication import JWTAuth
 
+from .auth import JWTAuth
 from .schemas import (
     LoginSchema,
     MessageSchema,
+    PasswordResetChallengeSchema,
+    PasswordResetConfirmSchema,
+    PasswordResetRequestSchema,
     RefreshTokenInput,
     RegisterSchema,
+    ResendTokenSchema,
     TokenSchema,
+    UpdateMeSchema,
+    UserMeSchema,
+    VerificationChallengeSchema,
+    VerifyTokenSchema,
 )
-from .views import login_user, logout_user, refresh_user_token, register_user
+from .views import (
+    confirm_password_reset,
+    get_current_user,
+    login_user,
+    logout_user,
+    refresh_user_token,
+    register_user,
+    request_password_reset,
+    resend_user_token,
+    update_current_user,
+    verify_user_token,
+)
 
 router = Router(tags=["Auth"])
 
 
-@router.post("/register", response=TokenSchema)
+@router.post("/register", response=VerificationChallengeSchema)
 async def register(request, payload: RegisterSchema):
     return await register_user(payload)
 
@@ -31,3 +50,33 @@ async def token_refresh(request, payload: RefreshTokenInput):
 @router.post("/logout", response=MessageSchema, auth=JWTAuth())
 async def logout(request, payload: RefreshTokenInput):
     return await logout_user(payload)
+
+
+@router.post("/verify-token", response=TokenSchema)
+async def verify_token(request, payload: VerifyTokenSchema):
+    return await verify_user_token(payload)
+
+
+@router.post("/resend-token", response=VerificationChallengeSchema)
+async def resend_token(request, payload: ResendTokenSchema):
+    return await resend_user_token(payload)
+
+
+@router.post("/forgot-password", response=PasswordResetChallengeSchema)
+async def forgot_password(request, payload: PasswordResetRequestSchema):
+    return await request_password_reset(payload)
+
+
+@router.post("/reset-password", response=MessageSchema)
+async def reset_password(request, payload: PasswordResetConfirmSchema):
+    return await confirm_password_reset(payload)
+
+
+@router.get("/me", response=UserMeSchema, auth=JWTAuth())
+async def me(request):
+    return await get_current_user(request)
+
+
+@router.patch("/me", response=UserMeSchema, auth=JWTAuth())
+async def update_me(request, payload: UpdateMeSchema):
+    return await update_current_user(request, payload)

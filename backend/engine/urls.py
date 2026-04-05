@@ -27,3 +27,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path("api/", api.urls),
 ]
+
+{
+  "email": "akan@gmail.com",
+  "password": "amorgrace35"
+}

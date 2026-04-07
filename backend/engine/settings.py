@@ -38,6 +38,8 @@ DEFAULT_ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
     ".vercel.app",
+    "https://cheeseballapp.com",
+    "https://www.cheeseballapp.com",
 ]
 ENV_ALLOWED_HOSTS = [
     host.strip()
@@ -48,10 +50,13 @@ ALLOWED_HOSTS = DEFAULT_ALLOWED_HOSTS + ENV_ALLOWED_HOSTS
 
 DEFAULT_TRUSTED_ORIGINS = [
     "http://localhost:3000",
+    "http://localhost:5173",
     "http://127.0.0.1:3000",
     "https://localhost:3000",
     "https://127.0.0.1:3000",
     "https://*.vercel.app",
+    "https://cheeseballapp.com",
+    "https://www.cheeseballapp.com",
 ]
 ENV_TRUSTED_ORIGINS = [
     origin.strip()

@@ -34,36 +34,14 @@ if not SECRET_KEY:
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 
-DEFAULT_ALLOWED_HOSTS = [
-    "localhost",
-    "127.0.0.1",
-    ".vercel.app",
+ALLOWED_HOSTS = [host.strip() for host in os.getenv("ALLOWED_HOSTS", "").split(",") if host.strip()]
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if origin.strip()]
+CORS_ALLOW_CREDENTIALS = os.getenv("CORS_ALLOW_CREDENTIALS", "true").lower() == "true"
+CSRF_TRUSTED_ORIGINS = [
     "https://cheeseballapp.com",
     "https://www.cheeseballapp.com",
-]
-ENV_ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.getenv("ALLOWED_HOSTS", "").split(",")
-    if host.strip()
-]
-ALLOWED_HOSTS = DEFAULT_ALLOWED_HOSTS + ENV_ALLOWED_HOSTS
-
-DEFAULT_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://127.0.0.1:3000",
-    "https://localhost:3000",
-    "https://127.0.0.1:3000",
     "https://*.vercel.app",
-    "https://cheeseballapp.com",
-    "https://www.cheeseballapp.com",
 ]
-ENV_TRUSTED_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
-    if origin.strip()
-]
-CSRF_TRUSTED_ORIGINS = DEFAULT_TRUSTED_ORIGINS + ENV_TRUSTED_ORIGINS
 
 
 # Application definition

@@ -4,6 +4,8 @@ from datetime import datetime, timedelta, timezone as dt_timezone
 
 from asgiref.sync import sync_to_async
 from django.contrib.auth import authenticate, get_user_model
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
 from django.utils import timezone
 from ninja.responses import Response
 from ninja_jwt.tokens import RefreshToken
@@ -28,6 +30,18 @@ MAX_TOKEN_ATTEMPTS = 5
 
 def generate_one_time_token():
     return f"{secrets.randbelow(1000000):06d}"
+
+
+async def send_auth_email(*, recipient: str, subject: str, html_template: str, text_template: str, context: dict):
+    text_body = render_to_string(text_template, context).strip()
+    html_body = render_to_string(html_template, context)
+    message = EmailMultiAlternatives(
+        subject=subject,
+        body=text_body,
+        to=[recipient],
+    )
+    message.attach_alternative(html_body, "text/html")
+    await sync_to_async(message.send)(fail_silently=False)
 
 
 def normalize_email(email: str) -> str:
@@ -93,11 +107,24 @@ async def register_user(payload: RegisterSchema):
         verification_token_expires_at=expires_at,
         verification_token_sent_at=sent_at,
     )
+    await send_auth_email(
+        subject="Verify your CheeseBall account",
+        recipient=email,
+        html_template="emails/verification_code.html",
+        text_template="emails/verification_code.txt",
+        context={
+            "headline": "Verify your account",
+            "preheader": "Use this code to finish setting up your CheeseBall account.",
+            "intro": "Welcome to CheeseBall. Use the verification code below to activate your account.",
+            "code": token,
+            "expires_in_minutes": VERIFICATION_TOKEN_TTL_MINUTES,
+            "action_label": "Verification code",
+            "help_text": "If you did not create this account, you can safely ignore this email.",
+        },
+    )
 
     return {
-        "message": "Registration successful. Verify your account with the token sent.",
-        "verification_token": token,
-        "verification_token_expires_at": expires_at.isoformat(),
+        "message": "Registration successful. Verify your account with the code sent to your email.",
         "resend_available_at": resend_available_at(sent_at).isoformat(),
     }
 
@@ -223,11 +250,24 @@ async def resend_user_token(payload: ResendTokenSchema):
             "verification_failed_attempts",
         ]
     )
+    await send_auth_email(
+        subject="Your CheeseBall verification code",
+        recipient=user.email,
+        html_template="emails/verification_code.html",
+        text_template="emails/verification_code.txt",
+        context={
+            "headline": "Your new verification code",
+            "preheader": "Use this fresh code to verify your CheeseBall account.",
+            "intro": "Here is your new CheeseBall verification code.",
+            "code": token,
+            "expires_in_minutes": VERIFICATION_TOKEN_TTL_MINUTES,
+            "action_label": "Verification code",
+            "help_text": "If you did not request this code, you can safely ignore this email.",
+        },
+    )
 
     return {
-        "message": "Verification token resent successfully",
-        "verification_token": token,
-        "verification_token_expires_at": expires_at.isoformat(),
+        "message": "Verification code resent successfully. Check your email.",
         "resend_available_at": resend_available_at(sent_at).isoformat(),
     }
 
@@ -255,11 +295,24 @@ async def request_password_reset(payload: PasswordResetRequestSchema):
             "reset_password_failed_attempts",
         ]
     )
+    await send_auth_email(
+        subject="Reset your CheeseBall password",
+        recipient=user.email,
+        html_template="emails/password_reset_code.html",
+        text_template="emails/password_reset_code.txt",
+        context={
+            "headline": "Reset your password",
+            "preheader": "Use this code to reset your CheeseBall password.",
+            "intro": "We received a request to reset your CheeseBall password. Use the code below to continue.",
+            "code": token,
+            "expires_in_minutes": RESET_PASSWORD_TOKEN_TTL_MINUTES,
+            "action_label": "Reset code",
+            "help_text": "If you did not request a password reset, you can ignore this email and your password will stay the same.",
+        },
+    )
 
     return {
-        "message": "Password reset token generated successfully",
-        "reset_token": token,
-        "reset_token_expires_at": expires_at.isoformat(),
+        "message": "Password reset code sent successfully. Check your email.",
         "resend_available_at": resend_available_at(sent_at).isoformat(),
     }
 

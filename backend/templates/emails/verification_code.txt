@@ -1,0 +1,12 @@
+CheeseBall
+
+{{ headline }}
+
+{{ intro }}
+
+{{ action_label }}: {{ code }}
+Expires in {{ expires_in_minutes }} minutes.
+
+Enter this code in the app to continue.
+
+{{ help_text }}

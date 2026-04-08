@@ -47,15 +47,11 @@ class TokenSchema(Schema):
 
 class VerificationChallengeSchema(Schema):
     message: str
-    verification_token: str
-    verification_token_expires_at: str
     resend_available_at: str
 
 
 class PasswordResetChallengeSchema(Schema):
     message: str
-    reset_token: str
-    reset_token_expires_at: str
     resend_available_at: str
 
 

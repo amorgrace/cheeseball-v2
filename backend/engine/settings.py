@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    "anymail",
     "corsheaders",
     "ninja_jwt",
     "ninja_jwt.token_blacklist", 
@@ -98,7 +99,7 @@ ROOT_URLCONF = 'engine.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / "templates"],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -174,6 +175,12 @@ QUOTE_TTL_MINUTES = int(os.getenv("QUOTE_TTL_MINUTES", "10"))
 PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY", "")
 PAYSTACK_PUBLIC_KEY = os.getenv("PAYSTACK_PUBLIC_KEY", "")
 PAYSTACK_WEBHOOK_SECRET = os.getenv("PAYSTACK_WEBHOOK_SECRET", PAYSTACK_SECRET_KEY)
+
+ANYMAIL = {
+    "MAILTRAP_API_TOKEN": os.getenv("MAILTRAP_API_TOKEN", ""),
+}
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "anymail.backends.mailtrap.EmailBackend")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "hello@www.cheeseballapp.com")
 
 BANK_ACCOUNT_NAME = os.getenv("BANK_ACCOUNT_NAME", "CheeseBall Limited")
 BANK_ACCOUNT_NUMBER = os.getenv("BANK_ACCOUNT_NUMBER", "0000000000")

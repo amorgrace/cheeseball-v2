@@ -6,6 +6,7 @@
     <meta name="color-scheme" content="light">
     <meta name="supported-color-schemes" content="light">
     <title>{{ headline }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -15,9 +16,9 @@
         }
 
         body {
-            background: #e8f4ff;
-            font-family: "Segoe UI", Arial, Helvetica, sans-serif;
-            color: #3a5878;
+            background: #EFF6FF !important;
+            font-family: "DM Sans", "Segoe UI", Arial, sans-serif;
+            color: #1E4A7B !important;
             -webkit-font-smoothing: antialiased;
             color-scheme: light only;
         }
@@ -30,262 +31,281 @@
             visibility: hidden;
         }
 
+        /* ── SHELL ── */
         .shell {
             width: 100%;
-            padding: 40px 16px;
-            background:
-                radial-gradient(circle at top left, rgba(130, 208, 255, 0.35) 0, rgba(130, 208, 255, 0) 34%),
-                linear-gradient(180deg, #f8fcff 0%, #e8f4ff 100%);
+            padding: 48px 16px 56px;
+            background: #EFF6FF !important;
         }
 
+        /* ── CARD ── */
         .card {
-            max-width: 600px;
+            max-width: 580px;
             margin: 0 auto;
-            background: #ffffff;
-            border: 1px solid #c2dff7;
-            border-radius: 20px;
+            background: #FFFFFF !important;
+            border: 1px solid #BFDBFE !important;
+            border-radius: 24px;
             overflow: hidden;
-            box-shadow: 0 18px 50px rgba(56, 170, 255, 0.14);
+            box-shadow:
+                0 1px 2px rgba(30, 74, 123, 0.04),
+                0 8px 24px rgba(37, 99, 235, 0.08),
+                0 32px 64px rgba(37, 99, 235, 0.06);
         }
 
+        /* ── HERO ── */
         .hero {
-            background:
-                radial-gradient(circle at top right, rgba(255, 255, 255, 0.28) 0, rgba(255, 255, 255, 0) 28%),
-                linear-gradient(180deg, #58beff 0%, #38aaff 58%, #2f9df0 100%);
-            padding: 32px 36px 28px;
-            color: #ffffff;
+            background: linear-gradient(160deg, #4AADEF 0%, #2F94DE 100%) !important;
+            padding: 36px 40px 32px;
+            position: relative;
+            overflow: hidden;
         }
 
-        .brand-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            background: rgba(255, 255, 255, 0.20);
-            border: 1px solid rgba(255, 255, 255, 0.35);
-            border-radius: 999px;
-            padding: 5px 12px 5px 8px;
-            margin-bottom: 18px;
-        }
-
-        .brand-dot {
-            width: 8px;
-            height: 8px;
+        /* Subtle geometric accent lines */
+        .hero::before {
+            content: "";
+            position: absolute;
+            top: -60px;
+            right: -60px;
+            width: 220px;
+            height: 220px;
             border-radius: 50%;
-            background: #ffffff;
-            flex-shrink: 0;
+            border: 40px solid rgba(255,255,255,0.06);
+            pointer-events: none;
         }
 
-        .brand-text {
-            font-size: 12px;
+        .hero::after {
+            content: "";
+            position: absolute;
+            bottom: -80px;
+            right: 60px;
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            border: 24px solid rgba(255,255,255,0.04);
+            pointer-events: none;
+        }
+
+        .brand-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .brand-wordmark {
+            font-size: 13px;
             font-weight: 600;
-            letter-spacing: 0.12em;
+            letter-spacing: 0.06em;
             text-transform: uppercase;
-            color: #ffffff;
+            color: rgba(255,255,255,0.70);
+        }
+
+        .brand-sep {
+            width: 1px;
+            height: 12px;
+            background: rgba(255,255,255,0.25);
+        }
+
+        .brand-tag {
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.45);
         }
 
         .hero h1 {
-            margin: 0 0 10px;
-            font-size: 28px;
+            font-size: 26px;
             font-weight: 600;
-            line-height: 1.2;
+            line-height: 1.25;
             letter-spacing: -0.02em;
-            color: #ffffff;
+            color: #FFFFFF;
+            margin: 0 0 10px;
+            position: relative;
         }
 
         .hero p {
-            margin: 0;
             font-size: 14px;
-            line-height: 1.65;
-            color: rgba(255, 255, 255, 0.88);
-            max-width: 420px;
+            line-height: 1.7;
+            color: rgba(255,255,255,0.72);
+            max-width: 400px;
+            font-weight: 300;
+            position: relative;
         }
 
+        /* ── BODY ── */
         .body {
-            padding: 32px 36px 24px;
+            padding: 36px 40px 28px;
         }
 
         .body p {
             font-size: 15px;
-            line-height: 1.7;
-            color: #3a5878;
+            line-height: 1.75;
+            color: #2D5F8F !important;
             margin: 0 0 16px;
-        }
-
-        .intro-copy {
-            margin-bottom: 18px;
+            font-weight: 400;
         }
 
         .eyebrow {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             font-size: 11px;
             font-weight: 600;
-            letter-spacing: 0.14em;
+            letter-spacing: 0.12em;
             text-transform: uppercase;
-            color: #1a8fe3;
-            background: #e4f3ff;
-            border-radius: 6px;
-            padding: 4px 10px;
-            margin-bottom: 16px;
+            color: #2F94DE;
+            margin-bottom: 20px;
         }
 
+        .eyebrow::before {
+            content: "";
+            display: inline-block;
+            width: 16px;
+            height: 2px;
+            background: #2F94DE;
+            border-radius: 2px;
+        }
+
+        /* ── OTP BLOCK ── */
         .otp-wrap {
-            background: linear-gradient(180deg, #fafdff 0%, #eef8ff 100%);
-            border: 1px solid #c8e6fb;
+            background: #F8FBFF !important;
+            border: 1px solid #DBEAFE !important;
             border-radius: 18px;
-            padding: 26px 22px 22px;
+            padding: 32px 28px 26px;
             text-align: center;
-            margin: 10px 0 22px;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
-        }
-
-        .otp-head {
-            margin-bottom: 18px;
+            margin: 8px 0 28px;
         }
 
         .otp-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2F94DE;
             margin-bottom: 6px;
-            font-size: 18px;
-            font-weight: 700;
-            line-height: 1.35;
-            color: #2a79bb;
+            letter-spacing: -0.01em;
         }
 
         .otp-subtitle {
             font-size: 13px;
+            color: #93B8D8;
             line-height: 1.6;
-            color: #6d9abb;
+            margin-bottom: 24px;
+            font-weight: 400;
         }
 
         .otp-label {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 600;
-            letter-spacing: 0.14em;
+            letter-spacing: 0.16em;
             text-transform: uppercase;
-            color: #4aabee;
+            color: #60A5FA;
             margin-bottom: 12px;
         }
 
         .otp-code {
             display: inline-block;
-            background: #ffffff;
-            border: 2px solid #90cffa;
-            border-radius: 16px;
-            padding: 18px 26px 18px 34px;
-            min-width: 290px;
-            font-size: 52px;
-            font-weight: 700;
-            letter-spacing: 0.34em;
-            color: #1a8fe3;
+            font-family: "DM Mono", "Courier New", monospace;
+            font-size: 46px;
+            font-weight: 500;
+            letter-spacing: 0.18em;
+            color: #2F94DE !important;
+            background: #FFFFFF !important;
+            border: 1.5px solid #BAE0FB !important;
+            border-radius: 14px;
+            padding: 18px 32px 18px 40px;
+            min-width: 280px;
             line-height: 1;
-            box-shadow: 0 14px 34px rgba(56, 170, 255, 0.16);
+            box-shadow:
+                0 2px 6px rgba(47, 148, 222, 0.10),
+                inset 0 1px 0 rgba(255,255,255,0.9);
         }
 
         .otp-meta {
-            margin-top: 14px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #7baed4;
+            margin-top: 16px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #93B8D8;
+            letter-spacing: 0.01em;
         }
 
-        .otp-steps {
-            margin-top: 18px;
-            padding-top: 18px;
-            border-top: 1px solid #d9eefc;
+        .otp-divider {
+            height: 1px;
+            background: #DBEAFE;
+            margin: 20px 0;
         }
 
         .otp-steps p {
             margin: 0;
             font-size: 13px;
             line-height: 1.7;
-            color: #6b96b7;
+            color: #7BAFD4;
+            font-weight: 400;
         }
 
+        /* ── NOTICE ── */
         .notice {
-            background: #f0f9ff;
-            border-left: 3px solid #38aaff;
-            border-radius: 0 10px 10px 0;
-            padding: 14px 16px;
-            margin: 0 36px 24px;
+            margin: 0 40px 28px;
+            background: #EFF6FF !important;
+            border: 1px solid #DBEAFE !important;
+            border-radius: 12px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .notice-icon {
+            flex-shrink: 0;
+            margin-top: 1px;
+            width: 16px;
+            height: 16px;
         }
 
         .notice p {
             margin: 0;
             font-size: 13px;
             line-height: 1.65;
-            color: #5c86a8;
+            color: #4A90C4;
+            font-weight: 400;
         }
 
+        /* ── FOOTER ── */
         .footer {
-            padding: 0 36px 30px;
+            padding: 0 40px 32px;
         }
 
-        .divider {
+        .footer-divider {
             height: 1px;
-            background: #e0f0fb;
+            background: #EFF6FF;
             margin-bottom: 20px;
         }
 
         .footer p {
             margin: 0;
-            font-size: 13px;
+            font-size: 12px;
             line-height: 1.7;
-            color: #7aa4c2;
+            color: #93B8D8;
+            font-weight: 400;
         }
 
         .footer strong {
-            color: #38aaff;
+            color: #2F94DE;
             font-weight: 600;
         }
 
-        @media (prefers-color-scheme: dark) {
-            body,
-            .shell,
-            .card,
-            .body,
-            .otp-wrap,
-            .notice,
-            .footer,
-            .divider {
-                background-color: inherit !important;
-            }
-
-            body,
-            .body p,
-            .otp-title,
-            .otp-subtitle,
-            .otp-label,
-            .otp-meta,
-            .otp-steps p,
-            .notice p,
-            .footer p,
-            .footer strong,
-            .eyebrow,
-            .otp-code {
-                color: inherit !important;
-            }
-
-            .card,
-            .otp-wrap,
-            .otp-code,
-            .notice,
-            .divider {
-                border-color: inherit !important;
-            }
-        }
-
+        /* ── RESPONSIVE ── */
         @media only screen and (max-width: 560px) {
-            .shell { padding: 20px 10px; }
-            .hero, .body, .footer { padding-left: 20px; padding-right: 20px; }
-            .notice { margin-left: 20px; margin-right: 20px; }
+            .shell { padding: 24px 12px 32px; }
+            .hero, .body, .footer { padding-left: 24px; padding-right: 24px; }
+            .notice { margin-left: 24px; margin-right: 24px; }
             .hero h1 { font-size: 22px; }
-            .otp-wrap { padding-left: 16px; padding-right: 16px; }
-            .otp-title { font-size: 16px; }
+            .otp-wrap { padding: 24px 16px 20px; }
             .otp-code {
                 min-width: 0;
                 width: 100%;
+                font-size: 34px;
                 padding: 16px 12px 16px 18px;
-                font-size: 36px;
-                letter-spacing: 0.24em;
+                letter-spacing: 0.14em;
             }
         }
     </style>
@@ -296,25 +316,60 @@
     <div class="shell">
         <div class="card">
 
+            <!-- HERO -->
             <div class="hero">
-                <div class="brand-pill">
-                    <div class="brand-dot"></div>
-                    <span class="brand-text">CheeseBall</span>
+                <div class="brand-row">
+                    <span class="brand-wordmark">CheeseBall</span>
+                    <div class="brand-sep"></div>
+                    <span class="brand-tag">Secure Mail</span>
                 </div>
                 <h1>{{ headline }}</h1>
                 <p>{{ preheader }}</p>
             </div>
 
+            <!-- BODY -->
             <div class="body">
-                {% block content %}{% endblock %}
+                {% block content %}
+
+                <span class="eyebrow">Verification Code</span>
+
+                <p class="intro-copy">
+                    Use the code below to complete your verification. It is valid for a limited time and should be entered exactly as shown.
+                </p>
+
+                <div class="otp-wrap">
+                    <div class="otp-head">
+                        <div class="otp-title">Your one-time passcode</div>
+                        <div class="otp-subtitle">Enter this code to continue. Do not share it with anyone.</div>
+                    </div>
+
+                    <div class="otp-label">Verification Code</div>
+                    <div class="otp-code">{{ otp_code }}</div>
+                    <div class="otp-meta">Expires in 10 minutes</div>
+
+                    <div class="otp-divider"></div>
+
+                    <div class="otp-steps">
+                        <p>Go back to the CheeseBall page and enter the code above to verify your identity.</p>
+                    </div>
+                </div>
+
+                {% endblock %}
             </div>
 
+            <!-- NOTICE -->
             <div class="notice">
+                <!-- Shield icon -->
+                <svg class="notice-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 1L2 3.5V7.5C2 11 4.8 14 8 15C11.2 14 14 11 14 7.5V3.5L8 1Z" stroke="#60A5FA" stroke-width="1.2" stroke-linejoin="round" fill="none"/>
+                    <path d="M5.5 8L7 9.5L10.5 6" stroke="#60A5FA" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
                 <p>Never share this code with anyone. CheeseBall support will never ask for it.</p>
             </div>
 
+            <!-- FOOTER -->
             <div class="footer">
-                <div class="divider"></div>
+                <div class="footer-divider"></div>
                 <p><strong>CheeseBall</strong>&nbsp;&nbsp;{{ help_text }}</p>
             </div>
 

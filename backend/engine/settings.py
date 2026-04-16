@@ -178,6 +178,7 @@ PAYSTACK_WEBHOOK_SECRET = os.getenv("PAYSTACK_WEBHOOK_SECRET", PAYSTACK_SECRET_K
 
 ANYMAIL = {
     "MAILTRAP_API_TOKEN": os.getenv("MAILTRAP_API_TOKEN", ""),
+    "MAILTRAP_SANDBOX_ID": os.getenv("MAILTRAP_SANDBOX_ID") or None,
 }
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "anymail.backends.mailtrap.EmailBackend")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "hello@www.cheeseballapp.com")

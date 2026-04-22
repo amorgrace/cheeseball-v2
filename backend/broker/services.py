@@ -3,6 +3,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.utils import timezone
 
 from rates.models import Asset, RateQuote
+from payouts.models import BeneficiaryBankAccount
 
 from .models import Transaction
 
@@ -10,6 +11,23 @@ from .models import Transaction
 def ensure_admin(user):
     if not user.is_staff:
         raise PermissionDenied("Admin access required")
+
+
+def validate_transaction_transition(transaction: Transaction, target_status: str) -> None:
+    allowed_transitions = {
+        Transaction.PENDING_PAYMENT: {Transaction.PENDING_REVIEW, Transaction.FAILED},
+        Transaction.PENDING_REVIEW: {Transaction.PAID, Transaction.REJECTED, Transaction.FAILED},
+        Transaction.PAID: {Transaction.PROCESSING, Transaction.COMPLETED, Transaction.FAILED},
+        Transaction.PROCESSING: {Transaction.COMPLETED, Transaction.FAILED},
+        Transaction.COMPLETED: set(),
+        Transaction.FAILED: set(),
+        Transaction.REJECTED: set(),
+    }
+    current_status = transaction.status
+    if target_status == current_status:
+        return
+    if target_status not in allowed_transitions.get(current_status, set()):
+        raise ValidationError(f"Cannot change transaction status from {current_status} to {target_status}")
 
 
 def get_valid_quote(quote_id: int, quote_type: str) -> RateQuote:
@@ -26,6 +44,7 @@ def get_broker_wallet_address(asset: Asset) -> str:
 
 
 def transition_transaction(transaction: Transaction, status: str, *, admin_user=None, note: str = "", reason: str = "") -> Transaction:
+    validate_transaction_transition(transaction, status)
     now = timezone.now()
     transaction.status = status
     if note:
@@ -77,6 +96,12 @@ def build_buy_transaction(*, user, payload):
 
 def build_sell_transaction(*, user, payload):
     quote = get_valid_quote(payload.quote_id, RateQuote.SELL)
+    beneficiary = BeneficiaryBankAccount.objects.filter(id=payload.beneficiary_id, user=user).first()
+    if not beneficiary:
+        raise ValidationError("Beneficiary bank account not found")
+    broker_wallet_address = get_broker_wallet_address(quote.asset)
+    if not broker_wallet_address:
+        raise ValidationError(f"Broker wallet address is not configured for {quote.asset.code}")
     return Transaction.objects.create(
         user=user,
         quote=quote,
@@ -88,10 +113,11 @@ def build_sell_transaction(*, user, payload):
         market_rate=quote.market_rate,
         markup_percent=quote.markup_percent,
         final_rate=quote.final_rate,
-        broker_wallet_address=get_broker_wallet_address(quote.asset),
-        bank_name=payload.bank_name.strip(),
-        bank_account_name=payload.bank_account_name.strip(),
-        bank_account_number=payload.bank_account_number.strip(),
+        broker_wallet_address=broker_wallet_address,
+        bank_name=beneficiary.bank_name,
+        bank_account_name=beneficiary.account_name,
+        bank_account_number=beneficiary.account_number,
+        bank_account_type=beneficiary.account_type,
     )
 
 

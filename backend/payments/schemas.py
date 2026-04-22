@@ -17,12 +17,17 @@ class PaymentSetupSchema(Schema):
 
 class BankTransferSubmissionSchema(Schema):
     receipt_reference: str
+    receipt_url: str
     receipt_note: str | None = None
 
     @model_validator(mode="after")
     def validate_receipt(self):
         if not self.receipt_reference.strip():
             raise ValueError("receipt_reference is required")
+        if not self.receipt_url.strip():
+            raise ValueError("receipt_url is required")
+        if not self.receipt_url.startswith(("http://", "https://")):
+            raise ValueError("receipt_url must be a valid URL")
         return self
 
 
@@ -38,6 +43,7 @@ class PaymentRecordSchema(Schema):
     provider: str
     provider_reference: str
     receipt_reference: str
+    receipt_url: str
     receipt_note: str
     provider_payload: dict
     user_confirmed_at: str | None = None

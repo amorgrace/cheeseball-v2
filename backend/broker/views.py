@@ -1,14 +1,11 @@
+from uuid import UUID
+
+from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from ninja.responses import Response
 
 from .models import Transaction
-from .services import (
-    build_buy_transaction,
-    build_sell_transaction,
-    ensure_admin,
-    transition_transaction,
-    user_can_access,
-)
+from .services import build_buy_transaction, build_sell_transaction, ensure_admin, transition_transaction, user_can_access
 
 
 def create_buy_transaction(request, payload):
@@ -16,7 +13,10 @@ def create_buy_transaction(request, payload):
 
 
 def create_sell_transaction(request, payload):
-    return build_sell_transaction(user=request.auth, payload=payload)
+    try:
+        return build_sell_transaction(user=request.auth, payload=payload)
+    except ValidationError as e:
+        return Response({"detail": str(e)}, status=400)
 
 
 def list_transactions(request):
@@ -24,14 +24,14 @@ def list_transactions(request):
     return list(queryset)
 
 
-def get_transaction(request, transaction_id):
+def get_transaction(request, transaction_id: UUID):
     transaction = get_object_or_404(Transaction, id=transaction_id)
     if not user_can_access(transaction, request.auth):
         return Response({"detail": "Transaction not found"}, status=404)
     return transaction
 
 
-def confirm_sell_crypto_sent(request, transaction_id):
+def confirm_sell_crypto_sent(request, transaction_id: UUID):
     transaction = get_object_or_404(Transaction, id=transaction_id, transaction_type=Transaction.SELL)
     if transaction.user_id != request.auth.id:
         return Response({"detail": "Transaction not found"}, status=404)
@@ -40,25 +40,37 @@ def confirm_sell_crypto_sent(request, transaction_id):
     return transition_transaction(transaction, Transaction.PENDING_REVIEW)
 
 
-def approve_transaction(request, transaction_id, payload):
+def approve_transaction(request, transaction_id: UUID, payload):
     ensure_admin(request.auth)
     transaction = get_object_or_404(Transaction, id=transaction_id)
-    return transition_transaction(transaction, Transaction.PROCESSING, admin_user=request.auth, note=payload.note or "")
+    try:
+        return transition_transaction(transaction, Transaction.PROCESSING, admin_user=request.auth, note=payload.note or "")
+    except ValidationError as e:
+        return Response({"detail": str(e)}, status=400)
 
 
-def reject_transaction(request, transaction_id, payload):
+def reject_transaction(request, transaction_id: UUID, payload):
     ensure_admin(request.auth)
     transaction = get_object_or_404(Transaction, id=transaction_id)
-    return transition_transaction(transaction, Transaction.REJECTED, admin_user=request.auth, reason=payload.reason)
+    try:
+        return transition_transaction(transaction, Transaction.REJECTED, admin_user=request.auth, reason=payload.reason)
+    except ValidationError as e:
+        return Response({"detail": str(e)}, status=400)
 
 
-def complete_transaction(request, transaction_id, payload):
+def complete_transaction(request, transaction_id: UUID, payload):
     ensure_admin(request.auth)
     transaction = get_object_or_404(Transaction, id=transaction_id)
-    return transition_transaction(transaction, Transaction.COMPLETED, admin_user=request.auth, note=payload.note or "")
+    try:
+        return transition_transaction(transaction, Transaction.COMPLETED, admin_user=request.auth, note=payload.note or "")
+    except ValidationError as e:
+        return Response({"detail": str(e)}, status=400)
 
 
-def fail_transaction(request, transaction_id, payload):
+def fail_transaction(request, transaction_id: UUID, payload):
     ensure_admin(request.auth)
     transaction = get_object_or_404(Transaction, id=transaction_id)
-    return transition_transaction(transaction, Transaction.FAILED, admin_user=request.auth, note=payload.note or "")
+    try:
+        return transition_transaction(transaction, Transaction.FAILED, admin_user=request.auth, note=payload.note or "")
+    except ValidationError as e:
+        return Response({"detail": str(e)}, status=400)

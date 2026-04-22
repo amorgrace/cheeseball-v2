@@ -22,18 +22,10 @@ class BuyTransactionCreateSchema(Schema):
 
 class SellTransactionCreateSchema(Schema):
     quote_id: int
-    bank_name: str
-    bank_account_name: str
-    bank_account_number: str
+    beneficiary_id: UUID
 
     @model_validator(mode="after")
     def validate_fields(self):
-        if not self.bank_name.strip():
-            raise ValueError("bank_name is required")
-        if not self.bank_account_name.strip():
-            raise ValueError("bank_account_name is required")
-        if not self.bank_account_number.strip():
-            raise ValueError("bank_account_number is required")
         return self
 
 
@@ -63,6 +55,7 @@ class TransactionSchema(Schema):
     bank_name: str
     bank_account_name: str
     bank_account_number: str
+    bank_account_type: str
     admin_notes: str
     rejection_reason: str
     reviewed_at: str | None = None

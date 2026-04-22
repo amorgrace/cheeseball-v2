@@ -29,6 +29,7 @@ class PaymentRecord(models.Model):
     provider = models.CharField(max_length=30, blank=True)
     provider_reference = models.CharField(max_length=120, blank=True)
     receipt_reference = models.CharField(max_length=255, blank=True)
+    receipt_url = models.URLField(blank=True)
     receipt_note = models.TextField(blank=True)
     provider_payload = models.JSONField(default=dict, blank=True)
     user_confirmed_at = models.DateTimeField(null=True, blank=True)

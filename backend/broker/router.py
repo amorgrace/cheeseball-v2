@@ -4,13 +4,7 @@ from ninja import Router
 
 from authenticator.auth import JWTAuth
 
-from .schemas import (
-    BuyTransactionCreateSchema,
-    RejectTransactionSchema,
-    SellTransactionCreateSchema,
-    TransactionActionSchema,
-    TransactionSchema,
-)
+from .schemas import BuyTransactionCreateSchema, RejectTransactionSchema, SellTransactionCreateSchema, TransactionActionSchema, TransactionSchema
 from .views import (
     approve_transaction,
     complete_transaction,
@@ -69,3 +63,4 @@ def admin_complete(request, transaction_id: UUID, payload: TransactionActionSche
 @router.post("/admin/transactions/{transaction_id}/fail", response=TransactionSchema, auth=JWTAuth())
 def admin_fail(request, transaction_id: UUID, payload: TransactionActionSchema):
     return fail_transaction(request, transaction_id, payload)
+

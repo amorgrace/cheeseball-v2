@@ -60,6 +60,7 @@ class Transaction(models.Model):
     bank_name = models.CharField(max_length=120, blank=True)
     bank_account_name = models.CharField(max_length=120, blank=True)
     bank_account_number = models.CharField(max_length=30, blank=True)
+    bank_account_type = models.CharField(max_length=20, blank=True)
     admin_notes = models.TextField(blank=True)
     rejection_reason = models.TextField(blank=True)
     approved_by = models.ForeignKey(

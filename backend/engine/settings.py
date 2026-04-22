@@ -61,6 +61,8 @@ INSTALLED_APPS = [
     "authenticator",
     "rates",
     "broker",
+    "payouts",
+    "wallets",
     "payments",
 ]
 

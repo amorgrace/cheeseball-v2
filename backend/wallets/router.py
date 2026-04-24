@@ -16,6 +16,10 @@ from .schemas import (
     WithdrawalActionSchema,
     WithdrawalCreateSchema,
     WithdrawalSchema,
+    DepositCreateSchema,
+    DepositResponseSchema,
+    DepositDetailSchema,
+    AdminDepositCompleteSchema,
 )
 from .views import (
     approve_withdrawal,
@@ -28,6 +32,10 @@ from .views import (
     list_withdrawals,
     preview_conversion,
     reject_withdrawal,
+    create_deposit,
+    get_deposit,
+    admin_list_deposits,
+    admin_complete_deposit,
 )
 
 router = Router(tags=["Wallets"])
@@ -81,3 +89,24 @@ def get_wallet(request, asset_code: str):
 @router.get("/balances/summary", response=BalanceSummarySchema, auth=JWTAuth())
 def balance_summary(request):
     return get_balance_summary(request)
+
+
+# Deposits
+@router.post("/deposits/create", response=DepositResponseSchema, auth=JWTAuth())
+def deposit_create(request, payload: DepositCreateSchema):
+    return create_deposit(request, payload)
+
+
+@router.get("/deposits/{deposit_id}", response=DepositDetailSchema, auth=JWTAuth())
+def deposit_detail(request, deposit_id: UUID):
+    return get_deposit(request, deposit_id)
+
+
+@router.get("/admin/deposits", response=list[DepositDetailSchema], auth=JWTAuth())
+def admin_deposits_list(request, status: str | None = None):
+    return admin_list_deposits(request, status)
+
+
+@router.post("/admin/deposits/{deposit_id}/complete", response=DepositDetailSchema, auth=JWTAuth())
+def admin_deposit_complete(request, deposit_id: UUID, payload: AdminDepositCompleteSchema):
+    return admin_complete_deposit(request, deposit_id, payload)

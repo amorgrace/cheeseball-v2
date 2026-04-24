@@ -1,3 +1,6 @@
+import logging
+from decimal import Decimal
+
 from django.conf import settings
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.utils import timezone
@@ -72,7 +75,32 @@ def transition_transaction(transaction: Transaction, status: str, *, admin_user=
         update_fields.append("failed_at")
 
     transaction.save(update_fields=update_fields)
+
+    if status == Transaction.COMPLETED:
+        _pay_referral_reward(transaction.user)
+
     return transaction
+
+
+REFERRAL_REWARD_NGN = Decimal("1000.00")
+logger = logging.getLogger(__name__)
+
+
+def _pay_referral_reward(user):
+    """Credit the referrer ₦1,000 on the referred user's first completed transaction."""
+    if user.referral_reward_paid or not user.referred_by_id:
+        return
+
+    from rates.services import get_asset
+    from wallets.services import deposit_to_wallet
+
+    try:
+        ngn = get_asset("NGN")
+        deposit_to_wallet(user.referred_by, ngn, REFERRAL_REWARD_NGN, notes=f"Referral reward for {user.email}")
+        user.referral_reward_paid = True
+        user.save(update_fields=["referral_reward_paid"])
+    except Exception:
+        logger.exception("Failed to pay referral reward for %s", user.email)
 
 
 def build_buy_transaction(*, user, payload):

@@ -127,7 +127,7 @@ class UserMeSchema(Schema):
     id: UUID
     email: str
     phone_number: str | None = None
-    referral_code: str | None = None
+    referral_code: str
     first_name: str
     last_name: str
     is_staff: bool
@@ -138,3 +138,16 @@ class UpdateMeSchema(Schema):
     first_name: str | None = None
     last_name: str | None = None
     phone_number: str | None = None
+
+
+class ReferredUserSchema(Schema):
+    email: str
+    joined_at: str
+
+
+class ReferralInfoSchema(Schema):
+    referral_code: str
+    referral_link: str
+    total_referrals: int
+    referrals: list[ReferredUserSchema]
+

@@ -141,10 +141,14 @@ async def register_user(payload: RegisterSchema):
 
 def _register_user_with_transaction(*, email: str, password: str, referral_code: str | None, token: str, sent_at, expires_at):
     with transaction.atomic():
+        referred_by = None
+        if referral_code:
+            referred_by = User.objects.filter(referral_code=referral_code.strip().upper()).first()
+
         User.objects.create_user(
             email=email,
             password=password,
-            referral_code=referral_code,
+            referred_by=referred_by,
             is_active=False,
             verification_token_hash=hash_token(token),
             verification_token_expires_at=expires_at,
@@ -427,3 +431,22 @@ async def update_current_user(request, payload: UpdateMeSchema):
         await sync_to_async(user.save)(update_fields=update_fields)
 
     return await get_current_user(request)
+
+
+REFERRAL_LINK_BASE = "https://cheeseballapp.com/register"
+
+
+async def get_referral_info(request):
+    user = request.auth
+    referrals = await sync_to_async(list)(
+        User.objects.filter(referred_by=user).values_list("email", "date_joined")
+    )
+    return {
+        "referral_code": user.referral_code,
+        "referral_link": f"{REFERRAL_LINK_BASE}?ref={user.referral_code}",
+        "total_referrals": len(referrals),
+        "referrals": [
+            {"email": email, "joined_at": joined.isoformat()}
+            for email, joined in referrals
+        ],
+    }

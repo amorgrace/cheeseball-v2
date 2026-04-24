@@ -20,6 +20,157 @@ from .services import (
     initialize_wallet_balances,
     perform_conversion,
 )
+from .models import PlatformAccount, DepositTransaction, PlatformReserve, ReserveMovement
+from .schemas import (
+    DepositCreateSchema,
+    DepositResponseSchema,
+    DepositDetailSchema,
+    AdminDepositCompleteSchema,
+)
+from django.db import transaction
+from django.utils import timezone
+import secrets
+import re
+
+
+def _generate_reference_code(length: int = 10) -> str:
+    # URL-safe, then keep alphanumeric and uppercase
+    token = secrets.token_urlsafe(8)
+    cleaned = re.sub(r"[^A-Za-z0-9]", "", token).upper()
+    if len(cleaned) >= length:
+        return cleaned[:length]
+    # pad with random chars if necessary
+    while len(cleaned) < length:
+        cleaned += secrets.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+    return cleaned
+
+
+def create_deposit(request, payload: DepositCreateSchema):
+    asset = get_object_or_404(Asset, code=payload.asset)
+    platform_account = get_object_or_404(PlatformAccount, asset=asset)
+
+    # generate unique reference
+    for _ in range(5):
+        ref = _generate_reference_code()
+        if not DepositTransaction.objects.filter(reference_code=ref).exists():
+            break
+    else:
+        return Response({"detail": "Could not generate unique reference"}, status=500)
+
+    deposit = DepositTransaction.objects.create(
+        user=request.auth,
+        platform_account=platform_account,
+        expected_amount=payload.expected_amount,
+        reference_code=ref,
+    )
+
+    memo_supported_networks = {"SOL", "XRP", "TRON", "TRX", "USDT"}
+    memo_supported = (platform_account.network or "").upper() in memo_supported_networks
+
+    return {
+        "id": deposit.id,
+        "asset": asset.code,
+        "expected_amount": deposit.expected_amount,
+        "platform_address": platform_account.platform_address,
+        "reference_code": deposit.reference_code,
+        "network": platform_account.network,
+        "memo_supported": memo_supported,
+        "created_at": deposit.created_at.isoformat(),
+    }
+
+
+def get_deposit(request, deposit_id: UUID):
+    deposit = get_object_or_404(DepositTransaction, id=deposit_id)
+    if not request.auth.is_staff and deposit.user_id != request.auth.id:
+        return Response({"detail": "Deposit not found"}, status=404)
+
+    return {
+        "id": deposit.id,
+        "asset": deposit.platform_account.asset.code,
+        "expected_amount": deposit.expected_amount,
+        "actual_amount": deposit.actual_amount,
+        "platform_address": deposit.platform_account.platform_address,
+        "reference_code": deposit.reference_code,
+        "external_reference": deposit.external_reference,
+        "status": deposit.status,
+        "created_at": deposit.created_at.isoformat(),
+        "completed_at": deposit.completed_at.isoformat() if deposit.completed_at else None,
+    }
+
+
+def admin_list_deposits(request, status: str | None = None):
+    from broker.services import ensure_admin
+
+    ensure_admin(request.auth)
+    query = DepositTransaction.objects.all()
+    if status:
+        query = query.filter(status=status)
+    results = []
+    for deposit in query.order_by("-created_at"):
+        results.append(
+            {
+                "id": deposit.id,
+                "asset": deposit.platform_account.asset.code,
+                "expected_amount": deposit.expected_amount,
+                "actual_amount": deposit.actual_amount,
+                "platform_address": deposit.platform_account.platform_address,
+                "reference_code": deposit.reference_code,
+                "external_reference": deposit.external_reference,
+                "status": deposit.status,
+                "created_at": deposit.created_at.isoformat(),
+                "completed_at": deposit.completed_at.isoformat() if deposit.completed_at else None,
+                "user": {"id": deposit.user.id, "email": deposit.user.email},
+            }
+        )
+    return results
+
+
+def admin_complete_deposit(request, deposit_id: UUID, payload: AdminDepositCompleteSchema):
+    from broker.services import ensure_admin
+
+    ensure_admin(request.auth)
+    deposit = get_object_or_404(DepositTransaction, id=deposit_id)
+    if deposit.status != DepositTransaction.PENDING:
+        return Response({"detail": f"Cannot complete deposit with status {deposit.status}"}, status=400)
+
+    actual_amount = payload.actual_amount
+
+    try:
+        with transaction.atomic():
+            # credit user's wallet (records a ledger entry)
+            asset = deposit.platform_account.asset
+            from .services import deposit_to_wallet
+
+            wallet = deposit_to_wallet(deposit.user, asset, actual_amount, notes=f"Deposit {deposit.reference_code}")
+
+            # update platform reserve and record movement
+            platform_reserve, _ = PlatformReserve.objects.get_or_create(asset=asset)
+            platform_reserve.balance = platform_reserve.balance + actual_amount
+            platform_reserve.save(update_fields=["balance", "updated_at"]) if hasattr(platform_reserve, "updated_at") else platform_reserve.save()
+
+            ReserveMovement.objects.create(asset=asset, movement_type=ReserveMovement.IN, amount=actual_amount, notes=f"Deposit {deposit.reference_code}")
+
+            deposit.actual_amount = actual_amount
+            deposit.external_reference = payload.external_reference or ""
+            deposit.status = DepositTransaction.COMPLETED
+            deposit.completed_at = timezone.now()
+            deposit.save()
+
+    except ValidationError as e:
+        return Response({"detail": str(e)}, status=400)
+
+    return {
+        "id": deposit.id,
+        "asset": deposit.platform_account.asset.code,
+        "expected_amount": deposit.expected_amount,
+        "actual_amount": deposit.actual_amount,
+        "platform_address": deposit.platform_account.platform_address,
+        "reference_code": deposit.reference_code,
+        "external_reference": deposit.external_reference,
+        "status": deposit.status,
+        "created_at": deposit.created_at.isoformat(),
+        "completed_at": deposit.completed_at.isoformat() if deposit.completed_at else None,
+    }
 
 
 def preview_conversion(request, payload):

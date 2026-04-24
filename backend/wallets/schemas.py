@@ -108,3 +108,37 @@ class BalanceSummarySchema(Schema):
     ngn_wallet_locked_balance: Decimal
     ngn_wallet_available_balance: Decimal
     wallet_count: int
+
+
+class DepositCreateSchema(Schema):
+    asset: str
+    expected_amount: Decimal
+
+
+class DepositResponseSchema(Schema):
+    id: UUID
+    asset: str
+    expected_amount: Decimal
+    platform_address: str
+    reference_code: str
+    network: str | None = None
+    memo_supported: bool = False
+    created_at: str
+
+
+class DepositDetailSchema(Schema):
+    id: UUID
+    asset: str
+    expected_amount: Decimal
+    actual_amount: Decimal | None = None
+    platform_address: str
+    reference_code: str
+    external_reference: str | None = None
+    status: str
+    created_at: str
+    completed_at: str | None = None
+
+
+class AdminDepositCompleteSchema(Schema):
+    actual_amount: Decimal
+    external_reference: str | None = None

@@ -7,6 +7,7 @@ from .schemas import (
     PasswordResetChallengeSchema,
     PasswordResetConfirmSchema,
     PasswordResetRequestSchema,
+    ReferralInfoSchema,
     RefreshTokenInput,
     RegisterSchema,
     ResendTokenSchema,
@@ -19,6 +20,7 @@ from .schemas import (
 from .views import (
     confirm_password_reset,
     get_current_user,
+    get_referral_info,
     login_user,
     logout_user,
     refresh_user_token,
@@ -80,3 +82,9 @@ async def me(request):
 @router.patch("/me", response=UserMeSchema, auth=JWTAuth())
 async def update_me(request, payload: UpdateMeSchema):
     return await update_current_user(request, payload)
+
+
+@router.get("/referral", response=ReferralInfoSchema, auth=JWTAuth())
+async def referral(request):
+    return await get_referral_info(request)
+

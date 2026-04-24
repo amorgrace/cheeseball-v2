@@ -172,3 +172,96 @@ class Ledger(models.Model):
     def __str__(self):
         return f"{self.user.email} - {self.transaction_type}: {self.amount}"
 
+
+class PlatformAccount(models.Model):
+    """Represents a single shared platform wallet address for an Asset (e.g. BTC, ETH)."""
+    asset = models.OneToOneField(
+        "rates.Asset",
+        on_delete=models.PROTECT,
+        related_name="platform_account",
+        to_field="code",
+        db_column="asset",
+    )
+    platform_address = models.CharField(max_length=255)
+    network = models.CharField(max_length=50, blank=True)
+    metadata = models.JSONField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["asset__code"]
+        db_table = "broker_platformaccount"
+
+    def __str__(self):
+        return f"Platform {self.asset.code} @ {self.platform_address}"
+
+
+class PlatformReserve(models.Model):
+    """Tracks the platform's on-chain reserve balance per asset."""
+    asset = models.OneToOneField(
+        "rates.Asset",
+        on_delete=models.PROTECT,
+        related_name="platform_reserve",
+        to_field="code",
+        db_column="asset",
+    )
+    balance = models.DecimalField(max_digits=30, decimal_places=8, default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["asset__code"]
+        db_table = "broker_platformreserve"
+
+    def __str__(self):
+        return f"Reserve {self.asset.code}: {self.balance}"
+
+
+class ReserveMovement(models.Model):
+    IN = "in"
+    OUT = "out"
+    MOVEMENT_CHOICES = ((IN, "In"), (OUT, "Out"))
+
+    asset = models.ForeignKey(
+        "rates.Asset",
+        on_delete=models.PROTECT,
+        related_name="reserve_movements",
+        to_field="code",
+        db_column="asset",
+    )
+    movement_type = models.CharField(max_length=10, choices=MOVEMENT_CHOICES)
+    amount = models.DecimalField(max_digits=30, decimal_places=8)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        db_table = "broker_reservemovement"
+
+    def __str__(self):
+        return f"{self.movement_type.upper()} {self.amount} {self.asset.code} @ {self.created_at.isoformat()}"
+
+
+class DepositTransaction(models.Model):
+    PENDING = "pending"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    STATUS_CHOICES = ((PENDING, "Pending"), (COMPLETED, "Completed"), (FAILED, "Failed"))
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="deposits")
+    platform_account = models.ForeignKey(PlatformAccount, on_delete=models.PROTECT, related_name="deposits")
+    expected_amount = models.DecimalField(max_digits=30, decimal_places=8)
+    actual_amount = models.DecimalField(max_digits=30, decimal_places=8, null=True, blank=True)
+    reference_code = models.CharField(max_length=64, unique=True)
+    external_reference = models.CharField(max_length=255, blank=True)  # txid or bank reference
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        db_table = "broker_deposittransaction"
+
+    def __str__(self):
+        return f"Deposit {self.reference_code} - {self.user.email} - {self.platform_account.asset.code} {self.expected_amount}"
+

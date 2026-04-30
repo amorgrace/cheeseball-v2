@@ -35,17 +35,23 @@ def setup_payment(request, payload):
         transaction=transaction,
         defaults={
             "method": payload.payment_method,
-            "provider": "paystack" if payload.payment_method == PaymentRecord.PAYSTACK else "manual",
+            "provider": "paystack" if payload.payment_method == PaymentRecord.PAYSTACK else "wallet" if payload.payment_method == PaymentRecord.NGN_WALLET else "manual",
         },
     )
     if payment_record.method != payload.payment_method:
         payment_record.method = payload.payment_method
-        payment_record.provider = "paystack" if payload.payment_method == PaymentRecord.PAYSTACK else "manual"
+        payment_record.provider = "paystack" if payload.payment_method == PaymentRecord.PAYSTACK else "wallet" if payload.payment_method == PaymentRecord.NGN_WALLET else "manual"
         payment_record.save(update_fields=["method", "provider"])
 
     if payload.payment_method == PaymentRecord.PAYSTACK:
         payment_record.provider_reference = f"cb_{uuid.uuid4().hex[:20]}"
         payment_record.save(update_fields=["provider_reference"])
+    elif payload.payment_method == PaymentRecord.NGN_WALLET:
+        payment_record.status = PaymentRecord.VERIFIED
+        payment_record.provider_reference = f"wallet_{transaction.id}"
+        payment_record.user_confirmed_at = transaction.paid_at or timezone.now()
+        payment_record.verified_at = transaction.paid_at or timezone.now()
+        payment_record.save(update_fields=["status", "provider_reference", "user_confirmed_at", "verified_at"])
 
     return payment_record
 

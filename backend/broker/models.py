@@ -31,9 +31,11 @@ class Transaction(models.Model):
 
     PAYSTACK = "paystack"
     BANK_TRANSFER = "bank_transfer"
+    NGN_WALLET = "ngn_wallet"
     PAYMENT_METHOD_CHOICES = (
         (PAYSTACK, "Paystack"),
         (BANK_TRANSFER, "Bank transfer"),
+        (NGN_WALLET, "NGN wallet"),
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -76,6 +78,7 @@ class Transaction(models.Model):
     failed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    finalized = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-created_at"]

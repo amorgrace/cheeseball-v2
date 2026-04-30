@@ -128,6 +128,7 @@ class Withdrawal(models.Model):
 class Ledger(models.Model):
     WALLET_DEPOSIT = "wallet_deposit"
     WALLET_WITHDRAWAL = "wallet_withdrawal"
+    BUY_PAYMENT = "buy_payment"
     CONVERSION_DEBIT = "conversion_debit"
     CONVERSION_CREDIT = "conversion_credit"
     WITHDRAWAL_LOCK = "withdrawal_lock"
@@ -135,15 +136,18 @@ class Ledger(models.Model):
     WITHDRAWAL_DEBIT = "withdrawal_debit"
     CONVERSION_LOCK = "conversion_lock"
     CONVERSION_RELEASE = "conversion_release"
+    SELL_LOCK_RELEASED = "sell_lock_released"
     TRANSACTION_TYPE_CHOICES = (
         (WALLET_DEPOSIT, "Wallet Deposit"),
         (WALLET_WITHDRAWAL, "Wallet Withdrawal"),
+        (BUY_PAYMENT, "Buy Payment"),
         (CONVERSION_DEBIT, "Conversion Debit"),
         (CONVERSION_CREDIT, "Conversion Credit"),
         (WITHDRAWAL_LOCK, "Withdrawal Lock"),
         (WITHDRAWAL_RELEASE, "Withdrawal Release"),
         (WITHDRAWAL_DEBIT, "Withdrawal Debit"),
         (CONVERSION_LOCK, "Conversion Lock"),
+        (SELL_LOCK_RELEASED, "Sell Lock Released"),
         (CONVERSION_RELEASE, "Conversion Release"),
     )
 
@@ -174,7 +178,6 @@ class Ledger(models.Model):
 
 
 class PlatformAccount(models.Model):
-    """Represents a single shared platform wallet address for an Asset (e.g. BTC, ETH)."""
     asset = models.OneToOneField(
         "rates.Asset",
         on_delete=models.PROTECT,
@@ -182,7 +185,7 @@ class PlatformAccount(models.Model):
         to_field="code",
         db_column="asset",
     )
-    platform_address = models.CharField(max_length=255)
+    platform_address = models.CharField(max_length=255, blank=True, null=True)
     network = models.CharField(max_length=50, blank=True)
     metadata = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -197,7 +200,6 @@ class PlatformAccount(models.Model):
 
 
 class PlatformReserve(models.Model):
-    """Tracks the platform's on-chain reserve balance per asset."""
     asset = models.OneToOneField(
         "rates.Asset",
         on_delete=models.PROTECT,
@@ -253,7 +255,7 @@ class DepositTransaction(models.Model):
     expected_amount = models.DecimalField(max_digits=30, decimal_places=8)
     actual_amount = models.DecimalField(max_digits=30, decimal_places=8, null=True, blank=True)
     reference_code = models.CharField(max_length=64, unique=True)
-    external_reference = models.CharField(max_length=255, blank=True)  # txid or bank reference
+    external_reference = models.CharField(max_length=255, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=PENDING)
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
@@ -264,4 +266,3 @@ class DepositTransaction(models.Model):
 
     def __str__(self):
         return f"Deposit {self.reference_code} - {self.user.email} - {self.platform_account.asset.code} {self.expected_amount}"
-

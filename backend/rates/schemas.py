@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 
 from ninja import Schema
@@ -45,4 +46,4 @@ class RateQuoteSchema(Schema):
     naira_amount: Decimal | None = None
     crypto_amount: Decimal | None = None
     source: str
-    expires_at: str
+    expires_at: datetime

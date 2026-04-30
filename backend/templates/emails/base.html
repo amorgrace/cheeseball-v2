@@ -31,14 +31,14 @@
             visibility: hidden;
         }
 
-        /* ── SHELL ── */
+
         .shell {
             width: 100%;
             padding: 48px 16px 56px;
             background: #EFF6FF !important;
         }
 
-        /* ── CARD ── */
+
         .card {
             max-width: 580px;
             margin: 0 auto;
@@ -52,7 +52,7 @@
                 0 32px 64px rgba(37, 99, 235, 0.06);
         }
 
-        /* ── HERO ── */
+
         .hero {
             background: linear-gradient(160deg, #4AADEF 0%, #2F94DE 100%) !important;
             padding: 36px 40px 32px;
@@ -60,7 +60,7 @@
             overflow: hidden;
         }
 
-        /* Subtle geometric accent lines */
+
         .hero::before {
             content: "";
             position: absolute;
@@ -133,7 +133,7 @@
             position: relative;
         }
 
-        /* ── BODY ── */
+
         .body {
             padding: 36px 40px 28px;
         }
@@ -167,7 +167,7 @@
             border-radius: 2px;
         }
 
-        /* ── OTP BLOCK ── */
+
         .otp-wrap {
             background: #F8FBFF !important;
             border: 1px solid #DBEAFE !important;
@@ -242,7 +242,7 @@
             font-weight: 400;
         }
 
-        /* ── NOTICE ── */
+
         .notice {
             margin: 0 40px 28px;
             background: #EFF6FF !important;
@@ -269,7 +269,7 @@
             font-weight: 400;
         }
 
-        /* ── FOOTER ── */
+
         .footer {
             padding: 0 40px 32px;
         }
@@ -293,7 +293,7 @@
             font-weight: 600;
         }
 
-        /* ── RESPONSIVE ── */
+
         @media only screen and (max-width: 560px) {
             .shell { padding: 24px 12px 32px; }
             .hero, .body, .footer { padding-left: 24px; padding-right: 24px; }
@@ -316,7 +316,7 @@
     <div class="shell">
         <div class="card">
 
-            <!-- HERO -->
+
             <div class="hero">
                 <div class="brand-row">
                     <span class="brand-wordmark">CheeseBall</span>
@@ -327,7 +327,7 @@
                 <p>{{ preheader }}</p>
             </div>
 
-            <!-- BODY -->
+
             <div class="body">
                 {% block content %}
 
@@ -357,9 +357,9 @@
                 {% endblock %}
             </div>
 
-            <!-- NOTICE -->
+
             <div class="notice">
-                <!-- Shield icon -->
+
                 <svg class="notice-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M8 1L2 3.5V7.5C2 11 4.8 14 8 15C11.2 14 14 11 14 7.5V3.5L8 1Z" stroke="#60A5FA" stroke-width="1.2" stroke-linejoin="round" fill="none"/>
                     <path d="M5.5 8L7 9.5L10.5 6" stroke="#60A5FA" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -367,7 +367,7 @@
                 <p>Never share this code with anyone. CheeseBall support will never ask for it.</p>
             </div>
 
-            <!-- FOOTER -->
+
             <div class="footer">
                 <div class="footer-divider"></div>
                 <p><strong>CheeseBall</strong>&nbsp;&nbsp;{{ help_text }}</p>

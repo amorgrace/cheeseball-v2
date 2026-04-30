@@ -70,6 +70,24 @@ class PaymentFlowTests(TestCase):
             "Payment method does not match this transaction",
         )
 
+    def test_setup_payment_for_ngn_wallet_returns_verified_record(self):
+        self.transaction.payment_method = Transaction.NGN_WALLET
+        self.transaction.status = Transaction.PAID
+        self.transaction.paid_at = timezone.now()
+        self.transaction.save(update_fields=["payment_method", "status", "paid_at"])
+
+        payment_record = setup_payment(
+            self.make_request(self.user),
+            SimpleNamespace(
+                transaction_id=self.transaction.id,
+                payment_method=PaymentRecord.NGN_WALLET,
+            ),
+        )
+
+        self.assertEqual(payment_record.method, PaymentRecord.NGN_WALLET)
+        self.assertEqual(payment_record.provider, "wallet")
+        self.assertEqual(payment_record.status, PaymentRecord.VERIFIED)
+
     def test_submit_bank_transfer_stores_receipt_url_and_marks_pending_review(self):
         payload = SimpleNamespace(
             receipt_reference="TRX-12345",

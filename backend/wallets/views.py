@@ -34,12 +34,12 @@ import re
 
 
 def _generate_reference_code(length: int = 10) -> str:
-    # URL-safe, then keep alphanumeric and uppercase
+
     token = secrets.token_urlsafe(8)
     cleaned = re.sub(r"[^A-Za-z0-9]", "", token).upper()
     if len(cleaned) >= length:
         return cleaned[:length]
-    # pad with random chars if necessary
+
     while len(cleaned) < length:
         cleaned += secrets.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
     return cleaned
@@ -49,7 +49,7 @@ def create_deposit(request, payload: DepositCreateSchema):
     asset = get_object_or_404(Asset, code=payload.asset)
     platform_account = get_object_or_404(PlatformAccount, asset=asset)
 
-    # generate unique reference
+
     for _ in range(5):
         ref = _generate_reference_code()
         if not DepositTransaction.objects.filter(reference_code=ref).exists():
@@ -66,6 +66,10 @@ def create_deposit(request, payload: DepositCreateSchema):
 
     memo_supported_networks = {"SOL", "XRP", "TRON", "TRX", "USDT"}
     memo_supported = (platform_account.network or "").upper() in memo_supported_networks
+
+
+    if not platform_account.platform_address:
+        return Response({"detail": "This asset is temporarily unavailable for deposits."}, status=400)
 
     return {
         "id": deposit.id,
@@ -137,13 +141,13 @@ def admin_complete_deposit(request, deposit_id: UUID, payload: AdminDepositCompl
 
     try:
         with transaction.atomic():
-            # credit user's wallet (records a ledger entry)
+
             asset = deposit.platform_account.asset
             from .services import deposit_to_wallet
 
             wallet = deposit_to_wallet(deposit.user, asset, actual_amount, notes=f"Deposit {deposit.reference_code}")
 
-            # update platform reserve and record movement
+
             platform_reserve, _ = PlatformReserve.objects.get_or_create(asset=asset)
             platform_reserve.balance = platform_reserve.balance + actual_amount
             platform_reserve.save(update_fields=["balance", "updated_at"]) if hasattr(platform_reserve, "updated_at") else platform_reserve.save()

@@ -10,8 +10,8 @@ class PaymentSetupSchema(Schema):
 
     @model_validator(mode="after")
     def validate_method(self):
-        if self.payment_method not in {"paystack", "bank_transfer"}:
-            raise ValueError("payment_method must be paystack or bank_transfer")
+        if self.payment_method not in {"paystack", "bank_transfer", "ngn_wallet"}:
+            raise ValueError("payment_method must be paystack, bank_transfer, or ngn_wallet")
         return self
 
 

@@ -91,7 +91,7 @@ def balance_summary(request):
     return get_balance_summary(request)
 
 
-# Deposits
+
 @router.post("/deposits/create", response=DepositResponseSchema, auth=JWTAuth())
 def deposit_create(request, payload: DepositCreateSchema):
     return create_deposit(request, payload)

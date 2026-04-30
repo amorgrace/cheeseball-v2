@@ -8,9 +8,11 @@ from django.test import TestCase
 from django.utils import timezone
 
 from broker.models import Transaction
-from broker.views import complete_transaction, create_sell_transaction
+from broker.views import complete_transaction, create_buy_transaction, create_sell_transaction
 from payouts.models import BeneficiaryBankAccount
 from rates.models import Asset, RateQuote
+from broker.services import transition_transaction, _finalize_transaction
+from wallets.models import PlatformReserve, ReserveMovement, Ledger as WalletLedger, WalletBalance
 
 
 class BrokerFlowTests(TestCase):
@@ -29,6 +31,13 @@ class BrokerFlowTests(TestCase):
                 "name": "Bitcoin",
                 "is_active": True,
                 "broker_wallet_address": "bc1qbrokerwallet123",
+            },
+        )
+        self.ngn_asset, _ = Asset.objects.update_or_create(
+            code="NGN",
+            defaults={
+                "name": "Nigerian Naira",
+                "is_active": True,
             },
         )
         self.buy_quote = RateQuote.objects.create(
@@ -85,6 +94,57 @@ class BrokerFlowTests(TestCase):
         )
         self.assertEqual(self.buy_transaction.status, Transaction.PENDING_PAYMENT)
 
+    def test_create_buy_transaction_with_ngn_wallet_debits_wallet_and_marks_paid(self):
+        WalletBalance.objects.update_or_create(
+            user=self.user,
+            asset=self.ngn_asset,
+            defaults={"balance": Decimal("150000.00")},
+        )
+
+        transaction = create_buy_transaction(
+            self.make_request(self.user),
+            SimpleNamespace(
+                quote_id=self.buy_quote.id,
+                wallet_address="0xabc123",
+                network="BTC",
+                payment_method=Transaction.NGN_WALLET,
+            ),
+        )
+
+        wallet = WalletBalance.objects.get(user=self.user, asset=self.ngn_asset)
+        self.assertIsInstance(transaction, Transaction)
+        self.assertEqual(transaction.status, Transaction.PAID)
+        self.assertEqual(transaction.payment_method, Transaction.NGN_WALLET)
+        self.assertEqual(wallet.balance, Decimal("47000.00000000"))
+        self.assertTrue(
+            WalletLedger.objects.filter(
+                user=self.user,
+                wallet_balance=wallet,
+                transaction_type=WalletLedger.BUY_PAYMENT,
+                reference_id=transaction.id,
+            ).exists()
+        )
+
+    def test_create_buy_transaction_with_ngn_wallet_rejects_insufficient_balance(self):
+        WalletBalance.objects.update_or_create(
+            user=self.user,
+            asset=self.ngn_asset,
+            defaults={"balance": Decimal("50000.00")},
+        )
+
+        response = create_buy_transaction(
+            self.make_request(self.user),
+            SimpleNamespace(
+                quote_id=self.buy_quote.id,
+                wallet_address="0xabc123",
+                network="BTC",
+                payment_method=Transaction.NGN_WALLET,
+            ),
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Transaction.objects.filter(payment_method=Transaction.NGN_WALLET).exists())
+
     def test_create_sell_transaction_uses_saved_beneficiary(self):
         beneficiary = BeneficiaryBankAccount.objects.create(
             user=self.user,
@@ -93,6 +153,9 @@ class BrokerFlowTests(TestCase):
             account_number="0123456789",
             account_type=BeneficiaryBankAccount.SAVINGS,
         )
+
+
+        WalletBalance.objects.update_or_create(user=self.user, asset=self.asset, defaults={"balance": self.sell_quote.crypto_amount})
 
         transaction = create_sell_transaction(
             self.make_request(self.user),
@@ -126,3 +189,29 @@ class BrokerFlowTests(TestCase):
             json.loads(response.content)["detail"],
             "['Beneficiary bank account not found']",
         )
+
+    def test_double_finalize_raises(self):
+
+        pr, _ = PlatformReserve.objects.update_or_create(asset=self.asset, defaults={"balance": self.buy_quote.crypto_amount})
+
+
+        self.buy_transaction.status = Transaction.PAID
+        self.buy_transaction.save(update_fields=["status"])
+
+
+        transition_transaction(self.buy_transaction, Transaction.COMPLETED, admin_user=self.admin, note="complete")
+        self.buy_transaction.refresh_from_db()
+        self.assertTrue(self.buy_transaction.finalized)
+
+
+        reserve_count = ReserveMovement.objects.filter(asset=self.asset).count()
+        ledger_count = WalletLedger.objects.filter(user=self.user).count()
+        wallet_balance_before = WalletBalance.objects.get(user=self.user, asset=self.asset).balance
+
+
+        with self.assertRaises(ValueError):
+            _finalize_transaction(self.buy_transaction)
+
+        self.assertEqual(ReserveMovement.objects.filter(asset=self.asset).count(), reserve_count)
+        self.assertEqual(WalletLedger.objects.filter(user=self.user).count(), ledger_count)
+        self.assertEqual(WalletBalance.objects.get(user=self.user, asset=self.asset).balance, wallet_balance_before)

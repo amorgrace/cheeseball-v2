@@ -13,8 +13,8 @@ class BuyTransactionCreateSchema(Schema):
 
     @model_validator(mode="after")
     def validate_fields(self):
-        if self.payment_method not in {"paystack", "bank_transfer"}:
-            raise ValueError("payment_method must be paystack or bank_transfer")
+        if self.payment_method not in {"paystack", "bank_transfer", "ngn_wallet"}:
+            raise ValueError("payment_method must be paystack, bank_transfer, or ngn_wallet")
         if not self.wallet_address.strip():
             raise ValueError("wallet_address is required")
         return self

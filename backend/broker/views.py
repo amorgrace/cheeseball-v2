@@ -9,7 +9,10 @@ from .services import build_buy_transaction, build_sell_transaction, ensure_admi
 
 
 def create_buy_transaction(request, payload):
-    return build_buy_transaction(user=request.auth, payload=payload)
+    try:
+        return build_buy_transaction(user=request.auth, payload=payload)
+    except ValidationError as e:
+        return Response({"detail": str(e)}, status=400)
 
 
 def create_sell_transaction(request, payload):

@@ -12,7 +12,6 @@ REFERRAL_CODE_PREFIX = "CB"
 
 
 def generate_referral_code():
-    """Generate a unique referral code like CB7KX9PM (prefix + 6 random alphanumeric chars)."""
     alphabet = string.ascii_uppercase + string.digits
     while True:
         suffix = "".join(secrets.choice(alphabet) for _ in range(REFERRAL_CODE_LENGTH))
@@ -52,6 +51,17 @@ class CustomUserManager(BaseUserManager):
 
 
 class CustomUser(AbstractUser):
+    KYC_UNVERIFIED = "unverified"
+    KYC_SUBMITTED = "submitted"
+    KYC_VERIFIED = "verified"
+    KYC_REJECTED = "rejected"
+    KYC_STATUS_CHOICES = (
+        (KYC_UNVERIFIED, "Unverified"),
+        (KYC_SUBMITTED, "Submitted"),
+        (KYC_VERIFIED, "Verified"),
+        (KYC_REJECTED, "Rejected"),
+    )
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     username = None
     email = models.EmailField(unique=True)
@@ -75,6 +85,7 @@ class CustomUser(AbstractUser):
     reset_password_failed_attempts = models.PositiveSmallIntegerField(default=0)
     last_password_reset_at = models.DateTimeField(blank=True, null=True)
     referral_reward_paid = models.BooleanField(default=False)
+    kyc_status = models.CharField(max_length=20, choices=KYC_STATUS_CHOICES, default=KYC_UNVERIFIED)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []

@@ -43,7 +43,10 @@ def get_user_wallet(user, asset: Asset) -> WalletBalance:
     return wallet
 
 
-def record_ledger(user, wallet_balance: WalletBalance, transaction_type: str, amount, reference_id=None, reference_model=None, notes=""):
+def record_ledger(user, wallet_balance: WalletBalance, transaction_type: str, amount, reference_id=None, reference_model="", notes=""):
+
+    if reference_model is None:
+        reference_model = ""
     return Ledger.objects.create(
         user=user,
         wallet_balance=wallet_balance,
@@ -157,7 +160,7 @@ def perform_conversion(user, rate_lock: RateLock) -> Conversion:
 
 @transaction.atomic
 def create_withdrawal(user, asset: Asset, amount, bank_name="", bank_account_name="", bank_account_number="", wallet_address="", network=""):
-    # Withdrawals are only allowed from NGN wallet and funds are debited on admin confirmation.
+
     if asset.code != NGN_CODE:
         raise ValidationError("Withdrawals are only supported for NGN wallet")
 
@@ -165,7 +168,7 @@ def create_withdrawal(user, asset: Asset, amount, bank_name="", bank_account_nam
     if wallet.available_balance < amount:
         raise ValidationError(f"Insufficient balance in {asset.code}")
 
-    # Do NOT lock or debit funds here; create a pending withdrawal record that freezes the payout details.
+
     return Withdrawal.objects.create(
         user=user,
         asset=asset,
@@ -185,18 +188,18 @@ def complete_withdrawal(withdrawal: Withdrawal, admin_user=None):
         raise ValidationError(f"Withdrawal is already {withdrawal.status}")
 
     wallet = get_user_wallet(withdrawal.user, withdrawal.asset)
-    # ensure funds still available at confirmation time
+
     if wallet.available_balance < withdrawal.amount:
         raise ValidationError(f"Insufficient balance in {withdrawal.asset.code} at confirmation time")
 
-    # debit user's wallet
+
     wallet.balance -= withdrawal.amount
     wallet.save(update_fields=["balance", "updated_at"])
 
-    # record ledger entry for user's wallet debit
+
     record_ledger(withdrawal.user, wallet, Ledger.WITHDRAWAL_DEBIT, withdrawal.amount, reference_model="Withdrawal")
 
-    # update platform reserve (NGN) and record reserve movement
+
     platform_reserve, _ = PlatformReserve.objects.get_or_create(asset=withdrawal.asset)
     platform_reserve.balance = platform_reserve.balance - withdrawal.amount
     platform_reserve.save(update_fields=["balance"]) if hasattr(platform_reserve, "updated_at") else platform_reserve.save()
@@ -216,7 +219,7 @@ def cancel_withdrawal(withdrawal: Withdrawal):
     if withdrawal.status != Withdrawal.PENDING:
         raise ValidationError(f"Cannot cancel withdrawal with status {withdrawal.status}")
 
-    # since initiation does not lock funds, cancellation simply marks the record cancelled
+
     withdrawal.status = Withdrawal.CANCELLED
     withdrawal.save(update_fields=["status"])
     return withdrawal

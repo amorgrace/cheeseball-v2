@@ -17,9 +17,11 @@ class PaymentRecord(models.Model):
 
     PAYSTACK = "paystack"
     BANK_TRANSFER = "bank_transfer"
+    NGN_WALLET = "ngn_wallet"
     METHOD_CHOICES = (
         (PAYSTACK, "Paystack"),
         (BANK_TRANSFER, "Bank transfer"),
+        (NGN_WALLET, "NGN wallet"),
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

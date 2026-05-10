@@ -37,6 +37,18 @@ class Transaction(models.Model):
         (BANK_TRANSFER, "Bank transfer"),
         (NGN_WALLET, "NGN wallet"),
     )
+    CRYPTO_SOURCE_CHEESEBALL = "cheeseball_wallet"
+    CRYPTO_SOURCE_EXTERNAL = "external_wallet"
+    CRYPTO_SOURCE_CHOICES = (
+        (CRYPTO_SOURCE_CHEESEBALL, "CheeseBall wallet"),
+        (CRYPTO_SOURCE_EXTERNAL, "External wallet"),
+    )
+    PAYOUT_BANK = "beneficiary_bank"
+    PAYOUT_NGN_WALLET = "ngn_wallet"
+    PAYOUT_METHOD_CHOICES = (
+        (PAYOUT_BANK, "Beneficiary bank"),
+        (PAYOUT_NGN_WALLET, "NGN wallet"),
+    )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="transactions")
@@ -56,9 +68,12 @@ class Transaction(models.Model):
     market_rate = models.DecimalField(max_digits=20, decimal_places=2)
     markup_percent = models.DecimalField(max_digits=6, decimal_places=2)
     final_rate = models.DecimalField(max_digits=20, decimal_places=2)
+    crypto_usd_price = models.DecimalField(max_digits=20, decimal_places=8, default=0)
     wallet_address = models.CharField(max_length=255, blank=True)
     network = models.CharField(max_length=50, blank=True)
     broker_wallet_address = models.CharField(max_length=255, blank=True)
+    crypto_source = models.CharField(max_length=30, choices=CRYPTO_SOURCE_CHOICES, default=CRYPTO_SOURCE_EXTERNAL)
+    payout_method = models.CharField(max_length=30, choices=PAYOUT_METHOD_CHOICES, blank=True)
     bank_name = models.CharField(max_length=120, blank=True)
     bank_account_name = models.CharField(max_length=120, blank=True)
     bank_account_number = models.CharField(max_length=30, blank=True)

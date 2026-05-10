@@ -32,6 +32,8 @@ class SellQuoteInputSchema(Schema):
 class AssetSchema(Schema):
     code: str
     name: str
+    network: str
+    broker_wallet_address: str
     is_active: bool
 
 
@@ -43,6 +45,7 @@ class RateQuoteSchema(Schema):
     market_rate: Decimal
     markup_percent: Decimal
     final_rate: Decimal
+    crypto_usd_price: Decimal
     naira_amount: Decimal | None = None
     crypto_amount: Decimal | None = None
     source: str

@@ -19,8 +19,8 @@ def ensure_admin(user):
 
 def validate_transaction_transition(transaction: Transaction, target_status: str) -> None:
     allowed_transitions = {
-        Transaction.PENDING_PAYMENT: {Transaction.PENDING_REVIEW, Transaction.FAILED},
-        Transaction.PENDING_REVIEW: {Transaction.PAID, Transaction.REJECTED, Transaction.FAILED},
+        Transaction.PENDING_PAYMENT: {Transaction.PENDING_REVIEW, Transaction.PAID, Transaction.FAILED},
+        Transaction.PENDING_REVIEW: {Transaction.PAID, Transaction.PROCESSING, Transaction.REJECTED, Transaction.FAILED},
         Transaction.PAID: {Transaction.PROCESSING, Transaction.COMPLETED, Transaction.FAILED},
         Transaction.PROCESSING: {Transaction.COMPLETED, Transaction.FAILED},
         Transaction.COMPLETED: set(),
@@ -79,7 +79,7 @@ def transition_transaction(transaction: Transaction, status: str, *, admin_user=
 
 
     if status in (Transaction.REJECTED, getattr(Transaction, 'CANCELLED', None)):
-        if transaction.transaction_type == Transaction.SELL:
+        if transaction.transaction_type == Transaction.SELL and transaction.crypto_source == Transaction.CRYPTO_SOURCE_CHEESEBALL:
             _release_locked_crypto(transaction)
 
     if status == Transaction.COMPLETED:
@@ -129,6 +129,7 @@ def build_buy_transaction(*, user, payload):
             market_rate=quote.market_rate,
             markup_percent=quote.markup_percent,
             final_rate=quote.final_rate,
+            crypto_usd_price=quote.crypto_usd_price,
             wallet_address=payload.wallet_address.strip(),
             network=(payload.network or "").strip(),
         )
@@ -172,44 +173,48 @@ def _debit_ngn_wallet_for_buy(transaction_obj: Transaction) -> None:
 
 
 def build_sell_transaction(*, user, payload):
-    quote = get_valid_quote(payload.quote_id, RateQuote.SELL)
-    beneficiary = BeneficiaryBankAccount.objects.filter(id=payload.beneficiary_id, user=user).first()
-    if not beneficiary:
-        raise ValidationError("Beneficiary bank account not found")
-    broker_wallet_address = get_broker_wallet_address(quote.asset)
-    if not broker_wallet_address:
-        raise ValidationError(f"Broker wallet address is not configured for {quote.asset.code}")
+    with db_transaction.atomic():
+        quote = get_valid_quote(payload.quote_id, RateQuote.SELL)
+        payout_method = getattr(payload, "payout_method", Transaction.PAYOUT_BANK)
+        beneficiary = None
 
-    from wallets.services import get_user_wallet, record_ledger
-    from wallets.models import Ledger as WalletLedger
+        if payout_method not in {Transaction.PAYOUT_BANK, Transaction.PAYOUT_NGN_WALLET}:
+            raise ValidationError("payout_method must be beneficiary_bank or ngn_wallet")
 
-    user_wallet = get_user_wallet(user, quote.asset)
-    if user_wallet.available_balance < quote.crypto_amount:
-        raise ValidationError(f"Insufficient balance in {quote.asset.code}")
+        if payout_method == Transaction.PAYOUT_BANK:
+            beneficiary = BeneficiaryBankAccount.objects.filter(id=payload.beneficiary_id, user=user).first()
+            if not beneficiary:
+                raise ValidationError("Beneficiary bank account not found")
 
-    user_wallet.locked_balance += quote.crypto_amount
-    user_wallet.save(update_fields=["locked_balance", "updated_at"])
+        broker_wallet_address = (getattr(payload, "broker_wallet_address", None) or "").strip() or get_broker_wallet_address(quote.asset)
+        if not broker_wallet_address:
+            raise ValidationError(f"Broker wallet address is not configured for {quote.asset.code}")
 
+        selected_network = (getattr(payload, "network", None) or "").strip() or quote.asset.network
 
-    record_ledger(user, user_wallet, WalletLedger.CONVERSION_LOCK, quote.crypto_amount, reference_model="Transaction")
+        transaction_obj = Transaction.objects.create(
+            user=user,
+            quote=quote,
+            transaction_type=Transaction.SELL,
+            asset=quote.asset,
+            status=Transaction.PENDING_PAYMENT,
+            naira_amount=quote.naira_amount,
+            crypto_amount=quote.crypto_amount,
+            market_rate=quote.market_rate,
+            markup_percent=quote.markup_percent,
+            final_rate=quote.final_rate,
+            crypto_usd_price=quote.crypto_usd_price,
+            network=selected_network,
+            broker_wallet_address=broker_wallet_address,
+            crypto_source=Transaction.CRYPTO_SOURCE_EXTERNAL,
+            payout_method=payout_method,
+            bank_name=beneficiary.bank_name if beneficiary else "",
+            bank_account_name=beneficiary.account_name if beneficiary else "",
+            bank_account_number=beneficiary.account_number if beneficiary else "",
+            bank_account_type=beneficiary.account_type if beneficiary else "",
+        )
 
-    return Transaction.objects.create(
-        user=user,
-        quote=quote,
-        transaction_type=Transaction.SELL,
-        asset=quote.asset,
-        status=Transaction.PENDING_PAYMENT,
-        naira_amount=quote.naira_amount,
-        crypto_amount=quote.crypto_amount,
-        market_rate=quote.market_rate,
-        markup_percent=quote.markup_percent,
-        final_rate=quote.final_rate,
-        broker_wallet_address=broker_wallet_address,
-        bank_name=beneficiary.bank_name,
-        bank_account_name=beneficiary.account_name,
-        bank_account_number=beneficiary.account_number,
-        bank_account_type=beneficiary.account_type,
-    )
+        return transaction_obj
 
 
 def user_can_access(transaction: Transaction, user) -> bool:
@@ -290,20 +295,22 @@ def _finalize_transaction(transaction_obj: Transaction, admin_user=None):
                 raise ValidationError(f"Platform reserve not configured for {asset.code}")
 
 
-            user_wallet = get_user_wallet(transaction_obj.user, asset)
-            if user_wallet.locked_balance < transaction_obj.crypto_amount:
-                raise ValidationError("Locked balance insufficient at finalization")
+            if transaction_obj.crypto_source == Transaction.CRYPTO_SOURCE_CHEESEBALL:
+                user_wallet = get_user_wallet(transaction_obj.user, asset)
+                if user_wallet.locked_balance < transaction_obj.crypto_amount:
+                    raise ValidationError("Locked balance insufficient at finalization")
 
-            user_wallet.locked_balance -= transaction_obj.crypto_amount
-            user_wallet.balance -= transaction_obj.crypto_amount
-            user_wallet.save(update_fields=["balance", "locked_balance", "updated_at"])
-
-
-            record_ledger(transaction_obj.user, user_wallet, WalletLedger.CONVERSION_DEBIT, transaction_obj.crypto_amount, reference_model="Transaction")
+                user_wallet.locked_balance -= transaction_obj.crypto_amount
+                user_wallet.balance -= transaction_obj.crypto_amount
+                user_wallet.save(update_fields=["balance", "locked_balance", "updated_at"])
 
 
-            ngn_asset = get_asset("NGN")
-            deposit_to_wallet(transaction_obj.user, ngn_asset, transaction_obj.naira_amount, notes=f"Sell {transaction_obj.id}")
+                record_ledger(transaction_obj.user, user_wallet, WalletLedger.CONVERSION_DEBIT, transaction_obj.crypto_amount, reference_id=transaction_obj.id, reference_model="Transaction")
+
+
+            if transaction_obj.payout_method == Transaction.PAYOUT_NGN_WALLET:
+                ngn_asset = get_asset("NGN")
+                deposit_to_wallet(transaction_obj.user, ngn_asset, transaction_obj.naira_amount, notes=f"Sell {transaction_obj.id}")
 
 
             platform_reserve.balance += transaction_obj.crypto_amount

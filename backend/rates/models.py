@@ -64,6 +64,7 @@ class RateQuote(models.Model):
     market_rate = models.DecimalField(max_digits=20, decimal_places=2)
     markup_percent = models.DecimalField(max_digits=6, decimal_places=2)
     final_rate = models.DecimalField(max_digits=20, decimal_places=2)
+    crypto_usd_price = models.DecimalField(max_digits=20, decimal_places=8, default=Decimal("0.00000000"))
     naira_amount = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
     crypto_amount = models.DecimalField(max_digits=20, decimal_places=8, null=True, blank=True)
     source = models.CharField(max_length=30, default="fallback")

@@ -22,10 +22,17 @@ class BuyTransactionCreateSchema(Schema):
 
 class SellTransactionCreateSchema(Schema):
     quote_id: int
-    beneficiary_id: UUID
+    payout_method: str = "beneficiary_bank"
+    beneficiary_id: UUID | None = None
+    network: str | None = None
+    broker_wallet_address: str | None = None
 
     @model_validator(mode="after")
     def validate_fields(self):
+        if self.payout_method not in {"beneficiary_bank", "ngn_wallet"}:
+            raise ValueError("payout_method must be beneficiary_bank or ngn_wallet")
+        if self.payout_method == "beneficiary_bank" and not self.beneficiary_id:
+            raise ValueError("beneficiary_id is required when payout_method is beneficiary_bank")
         return self
 
 
@@ -49,9 +56,12 @@ class TransactionSchema(Schema):
     market_rate: Decimal
     markup_percent: Decimal
     final_rate: Decimal
+    crypto_usd_price: Decimal
     wallet_address: str
     network: str
     broker_wallet_address: str
+    crypto_source: str
+    payout_method: str
     bank_name: str
     bank_account_name: str
     bank_account_number: str

@@ -21,11 +21,13 @@ class TransactionAdmin(admin.ModelAdmin):
         "transaction_type",
         "status",
         "payment_method",
+        "crypto_source",
+        "payout_method",
         "naira_amount",
         "crypto_amount",
         "created_at",
     )
-    list_filter = ("transaction_type", "status", "payment_method", "asset")
+    list_filter = ("transaction_type", "status", "payment_method", "crypto_source", "payout_method", "asset")
     search_fields = ("id", "user__email", "wallet_address", "bank_account_number")
     readonly_fields = ("created_at", "updated_at", "reviewed_at", "paid_at", "completed_at", "failed_at")
     actions = [mark_processing, mark_completed]

@@ -8,7 +8,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from broker.models import Transaction
-from broker.views import complete_transaction, create_buy_transaction, create_sell_transaction
+from broker.views import approve_transaction, complete_transaction, create_buy_transaction, create_sell_transaction
 from payouts.models import BeneficiaryBankAccount
 from rates.models import Asset, RateQuote
 from broker.services import transition_transaction, _finalize_transaction
@@ -145,7 +145,44 @@ class BrokerFlowTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertFalse(Transaction.objects.filter(payment_method=Transaction.NGN_WALLET).exists())
 
-    def test_create_sell_transaction_uses_saved_beneficiary(self):
+    def create_beneficiary(self):
+        return BeneficiaryBankAccount.objects.create(
+            user=self.user,
+            account_name="Jane Doe",
+            bank_name="Demo Bank",
+            account_number="0123456789",
+            account_type=BeneficiaryBankAccount.SAVINGS,
+        )
+
+    def test_create_external_sell_transaction_uses_saved_beneficiary_without_locking_crypto(self):
+        beneficiary = self.create_beneficiary()
+
+        transaction = create_sell_transaction(
+            self.make_request(self.user),
+            SimpleNamespace(
+                quote_id=self.sell_quote.id,
+                payout_method=Transaction.PAYOUT_BANK,
+                beneficiary_id=beneficiary.id,
+                network="Bitcoin",
+            ),
+        )
+
+        self.assertIsInstance(transaction, Transaction)
+        self.assertEqual(transaction.transaction_type, Transaction.SELL)
+        self.assertEqual(transaction.crypto_source, Transaction.CRYPTO_SOURCE_EXTERNAL)
+        self.assertEqual(transaction.payout_method, Transaction.PAYOUT_BANK)
+        self.assertEqual(transaction.network, "Bitcoin")
+        self.assertEqual(transaction.bank_name, beneficiary.bank_name)
+        self.assertEqual(transaction.bank_account_name, beneficiary.account_name)
+        self.assertEqual(transaction.bank_account_number, beneficiary.account_number)
+        self.assertEqual(transaction.bank_account_type, beneficiary.account_type)
+        self.assertEqual(transaction.broker_wallet_address, "bc1qbrokerwallet123")
+        wallet = WalletBalance.objects.filter(user=self.user, asset=self.asset).first()
+        if wallet:
+            self.assertEqual(wallet.balance, Decimal("0E-8"))
+            self.assertEqual(wallet.locked_balance, Decimal("0E-8"))
+
+    def test_create_sell_transaction_ignores_cheeseball_wallet_source_and_does_not_lock_crypto(self):
         beneficiary = BeneficiaryBankAccount.objects.create(
             user=self.user,
             account_name="Jane Doe",
@@ -159,16 +196,21 @@ class BrokerFlowTests(TestCase):
 
         transaction = create_sell_transaction(
             self.make_request(self.user),
-            SimpleNamespace(quote_id=self.sell_quote.id, beneficiary_id=beneficiary.id),
+            SimpleNamespace(
+                quote_id=self.sell_quote.id,
+                crypto_source=Transaction.CRYPTO_SOURCE_CHEESEBALL,
+                payout_method=Transaction.PAYOUT_BANK,
+                beneficiary_id=beneficiary.id,
+            ),
         )
 
+        wallet = WalletBalance.objects.get(user=self.user, asset=self.asset)
         self.assertIsInstance(transaction, Transaction)
         self.assertEqual(transaction.transaction_type, Transaction.SELL)
-        self.assertEqual(transaction.bank_name, beneficiary.bank_name)
-        self.assertEqual(transaction.bank_account_name, beneficiary.account_name)
-        self.assertEqual(transaction.bank_account_number, beneficiary.account_number)
-        self.assertEqual(transaction.bank_account_type, beneficiary.account_type)
-        self.assertEqual(transaction.broker_wallet_address, "bc1qbrokerwallet123")
+        self.assertEqual(transaction.crypto_source, Transaction.CRYPTO_SOURCE_EXTERNAL)
+        self.assertEqual(wallet.balance, self.sell_quote.crypto_amount)
+        self.assertEqual(wallet.locked_balance, Decimal("0E-8"))
+        self.assertFalse(WalletLedger.objects.filter(transaction_type=WalletLedger.CONVERSION_LOCK, reference_id=transaction.id).exists())
 
     def test_create_sell_transaction_rejects_beneficiary_from_another_user(self):
         beneficiary = BeneficiaryBankAccount.objects.create(
@@ -181,7 +223,11 @@ class BrokerFlowTests(TestCase):
 
         response = create_sell_transaction(
             self.make_request(self.user),
-            SimpleNamespace(quote_id=self.sell_quote.id, beneficiary_id=beneficiary.id),
+            SimpleNamespace(
+                quote_id=self.sell_quote.id,
+                payout_method=Transaction.PAYOUT_BANK,
+                beneficiary_id=beneficiary.id,
+            ),
         )
 
         self.assertEqual(response.status_code, 400)
@@ -189,6 +235,49 @@ class BrokerFlowTests(TestCase):
             json.loads(response.content)["detail"],
             "['Beneficiary bank account not found']",
         )
+
+    def test_external_sell_to_ngn_wallet_credits_ngn_on_completion(self):
+        transaction = create_sell_transaction(
+            self.make_request(self.user),
+            SimpleNamespace(
+                quote_id=self.sell_quote.id,
+                payout_method=Transaction.PAYOUT_NGN_WALLET,
+                beneficiary_id=None,
+                network="Bitcoin",
+            ),
+        )
+        PlatformReserve.objects.update_or_create(asset=self.asset, defaults={"balance": Decimal("0.00000000")})
+
+        transition_transaction(transaction, Transaction.PENDING_REVIEW)
+        approve_transaction(self.make_request(self.admin), transaction.id, SimpleNamespace(note="Crypto received"))
+        complete_transaction(self.make_request(self.admin), transaction.id, SimpleNamespace(note="Paid to wallet"))
+
+        ngn_wallet = WalletBalance.objects.get(user=self.user, asset=self.ngn_asset)
+        transaction.refresh_from_db()
+        self.assertEqual(transaction.status, Transaction.COMPLETED)
+        self.assertEqual(ngn_wallet.balance, self.sell_quote.naira_amount)
+        self.assertEqual(PlatformReserve.objects.get(asset=self.asset).balance, self.sell_quote.crypto_amount)
+
+    def test_external_sell_to_bank_does_not_credit_ngn_wallet_on_completion(self):
+        beneficiary = self.create_beneficiary()
+        transaction = create_sell_transaction(
+            self.make_request(self.user),
+            SimpleNamespace(
+                quote_id=self.sell_quote.id,
+                payout_method=Transaction.PAYOUT_BANK,
+                beneficiary_id=beneficiary.id,
+            ),
+        )
+        PlatformReserve.objects.update_or_create(asset=self.asset, defaults={"balance": Decimal("0.00000000")})
+
+        transition_transaction(transaction, Transaction.PENDING_REVIEW)
+        approve_transaction(self.make_request(self.admin), transaction.id, SimpleNamespace(note="Crypto received"))
+        complete_transaction(self.make_request(self.admin), transaction.id, SimpleNamespace(note="Bank paid"))
+
+        transaction.refresh_from_db()
+        self.assertEqual(transaction.status, Transaction.COMPLETED)
+        self.assertFalse(WalletBalance.objects.filter(user=self.user, asset=self.ngn_asset).exists())
+        self.assertEqual(PlatformReserve.objects.get(asset=self.asset).balance, self.sell_quote.crypto_amount)
 
     def test_double_finalize_raises(self):
 

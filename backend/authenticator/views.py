@@ -134,7 +134,7 @@ async def register_user(payload: RegisterSchema):
         )
 
     return {
-        "message": "Registration successful. Verify your account with the code sent to your email.",
+        "message": "Registration successful. Verify your account with the code sent to your email. If you do not see it in your inbox, please check your spam or junk folder.",
         "resend_available_at": resend_available_at(sent_at).isoformat(),
     }
 
@@ -313,7 +313,7 @@ async def resend_user_token(payload: ResendTokenSchema):
         return email_delivery_error_response("Unable to resend verification email right now. Please try again.")
 
     return {
-        "message": "Verification code resent successfully. Check your email.",
+        "message": "Verification code resent successfully. Check your email. If you do not see it in your inbox, please check your spam or junk folder.",
         "resend_available_at": resend_available_at(sent_at).isoformat(),
     }
 
@@ -362,7 +362,7 @@ async def request_password_reset(payload: PasswordResetRequestSchema):
         return email_delivery_error_response("Unable to send password reset email right now. Please try again.")
 
     return {
-        "message": "Password reset code sent successfully. Check your email.",
+        "message": "Password reset code sent successfully. Check your email. If you do not see it in your inbox, please check your spam or junk folder.",
         "resend_available_at": resend_available_at(sent_at).isoformat(),
     }
 

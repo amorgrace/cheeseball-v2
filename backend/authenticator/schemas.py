@@ -15,12 +15,22 @@ class RegisterSchema(Schema):
     email: str
     password: str
     confirm_password: str
+    fullname: str | None = None
+    phone_number: str | None = None
     referral_code: str | None = None
 
     @field_validator("email")
     @classmethod
     def validate_email_address(cls, value: str):
         return normalize_email_value(value)
+
+    @field_validator("fullname", "phone_number", mode="before")
+    @classmethod
+    def strip_optional_text(cls, value: str | None):
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
 
     @model_validator(mode="after")
     def passwords_match(self):
@@ -150,4 +160,3 @@ class ReferralInfoSchema(Schema):
     referral_link: str
     total_referrals: int
     referrals: list[ReferredUserSchema]
-

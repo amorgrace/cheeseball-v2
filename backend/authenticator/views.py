@@ -115,6 +115,7 @@ async def register_user(payload: RegisterSchema):
     if await User.objects.filter(email=email).aexists():
         return Response({"detail": "Email already registered"}, status=400)
 
+    first_name, last_name = split_fullname(payload.fullname)
     token = generate_one_time_token()
     sent_at = timezone.now()
     expires_at = verification_expiry()
@@ -122,6 +123,9 @@ async def register_user(payload: RegisterSchema):
         await sync_to_async(_register_user_with_transaction)(
             email=email,
             password=payload.password,
+            first_name=first_name,
+            last_name=last_name,
+            phone_number=payload.phone_number,
             referral_code=payload.referral_code,
             token=token,
             sent_at=sent_at,
@@ -139,7 +143,26 @@ async def register_user(payload: RegisterSchema):
     }
 
 
-def _register_user_with_transaction(*, email: str, password: str, referral_code: str | None, token: str, sent_at, expires_at):
+def split_fullname(fullname: str | None) -> tuple[str, str]:
+    if not fullname:
+        return "", ""
+
+    first_name, _, last_name = fullname.strip().partition(" ")
+    return first_name, last_name
+
+
+def _register_user_with_transaction(
+    *,
+    email: str,
+    password: str,
+    first_name: str,
+    last_name: str,
+    phone_number: str | None,
+    referral_code: str | None,
+    token: str,
+    sent_at,
+    expires_at,
+):
     with transaction.atomic():
         referred_by = None
         if referral_code:
@@ -148,6 +171,9 @@ def _register_user_with_transaction(*, email: str, password: str, referral_code:
         User.objects.create_user(
             email=email,
             password=password,
+            first_name=first_name,
+            last_name=last_name,
+            phone_number=phone_number,
             referred_by=referred_by,
             is_active=False,
             verification_token_hash=hash_token(token),

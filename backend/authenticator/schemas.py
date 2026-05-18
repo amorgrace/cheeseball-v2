@@ -90,6 +90,23 @@ class VerifyTokenSchema(Schema):
         return value
 
 
+class VerifyResetTokenSchema(Schema):
+    email: str
+    token: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_email_address(cls, value: str):
+        return normalize_email_value(value)
+
+    @field_validator("token")
+    @classmethod
+    def validate_token(cls, value: str):
+        if not value.isdigit() or len(value) != 6:
+            raise ValueError("Token must be a 6-digit code")
+        return value
+
+
 class ResendTokenSchema(Schema):
     email: str
 

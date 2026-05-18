@@ -16,6 +16,7 @@ from .schemas import (
     UserMeSchema,
     VerificationChallengeSchema,
     VerifyTokenSchema,
+    VerifyResetTokenSchema,
 )
 from .views import (
     confirm_password_reset,
@@ -29,6 +30,7 @@ from .views import (
     resend_user_token,
     update_current_user,
     verify_user_token,
+    verify_reset_token,
 )
 
 router = Router(tags=["Auth"])
@@ -57,6 +59,11 @@ async def logout(request, payload: RefreshTokenInput):
 @router.post("/verify-token", response=TokenSchema)
 async def verify_token(request, payload: VerifyTokenSchema):
     return await verify_user_token(payload)
+
+
+@router.post("/verify-reset-token", response=MessageSchema)
+async def verify_reset_token_endpoint(request, payload: VerifyResetTokenSchema):
+    return await verify_reset_token(payload)
 
 
 @router.post("/resend-token", response=VerificationChallengeSchema)

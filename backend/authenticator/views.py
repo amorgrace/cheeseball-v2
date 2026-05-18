@@ -22,6 +22,7 @@ from .schemas import (
     ResendTokenSchema,
     UpdateMeSchema,
     VerifyTokenSchema,
+    VerifyResetTokenSchema,
 )
 
 User = get_user_model()
@@ -342,6 +343,28 @@ async def resend_user_token(payload: ResendTokenSchema):
         "message": "Verification code resent successfully. Check your email. If you do not see it in your inbox, please check your spam or junk folder.",
         "resend_available_at": resend_available_at(sent_at).isoformat(),
     }
+
+
+async def verify_reset_token(payload: VerifyResetTokenSchema):
+    user = await User.objects.filter(email=normalize_email(payload.email)).afirst()
+    if not user:
+        return Response({"detail": "User not found"}, status=404)
+
+    if user.reset_password_failed_attempts >= MAX_TOKEN_ATTEMPTS:
+        return Response({"detail": "Too many invalid reset attempts. Please request a new token."}, status=429)
+
+    if not token_matches(payload.token, user.reset_password_token_hash):
+        user.reset_password_failed_attempts += 1
+        await sync_to_async(user.save)(update_fields=["reset_password_failed_attempts"])
+        return Response({"detail": "Invalid reset token"}, status=400)
+
+    if not user.has_valid_reset_password_token:
+        return Response({"detail": "Reset token expired"}, status=400)
+
+    user.reset_password_failed_attempts = 0
+    await sync_to_async(user.save)(update_fields=["reset_password_failed_attempts"])
+
+    return {"message": "Reset token valid"}
 
 
 async def request_password_reset(payload: PasswordResetRequestSchema):

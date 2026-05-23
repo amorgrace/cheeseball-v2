@@ -55,6 +55,7 @@ def _create_paystack_bank_transfer_charge(transaction, reference: str) -> dict:
         headers={
             "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
             "Content-Type": "application/json",
+            "User-Agent": "CheeseBall/1.0 (+https://cheeseballapp.com)",
         },
         method="POST",
     )
@@ -186,6 +187,7 @@ def paystack_webhook(request, payload, signature: str | None):
     reference = data.get("reference", "")
     status = data.get("status", "")
     amount = data.get("amount")
+    requested_amount = data.get("requested_amount")
     currency = data.get("currency", "")
     channel = data.get("channel", "")
     payment_record = PaymentRecord.objects.filter(provider_reference=reference, method=PaymentRecord.PAYSTACK).first()
@@ -198,7 +200,8 @@ def paystack_webhook(request, payload, signature: str | None):
 
     if event_name == "charge.success" and status == "success":
         expected_amount = _amount_to_kobo(transaction.naira_amount)
-        if int(amount or 0) != expected_amount or currency != settings.PAYSTACK_CURRENCY:
+        settled_amount = requested_amount if requested_amount is not None else amount
+        if int(settled_amount or 0) != expected_amount or currency != settings.PAYSTACK_CURRENCY:
             payment_record.status = PaymentRecord.PENDING_REVIEW
             payment_record.save(update_fields=["provider_payload", "user_confirmed_at", "status"])
             if transaction.status == Transaction.PENDING_PAYMENT:

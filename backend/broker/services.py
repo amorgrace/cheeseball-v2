@@ -11,6 +11,10 @@ from payouts.models import BeneficiaryBankAccount
 
 from .models import Transaction
 
+AUTOMATED_BUY_ASSET_CODES = {"BTC", "ETH", "USDT"}
+AUTOMATED_BUY_PAYMENT_METHODS = {Transaction.PAYSTACK, Transaction.NGN_WALLET}
+MANUAL_BUY_PAYMENT_METHODS = {Transaction.BANK_TRANSFER}
+
 
 def ensure_admin(user):
     if not user.is_staff:
@@ -45,6 +49,18 @@ def get_valid_quote(quote_id: int, quote_type: str) -> RateQuote:
 
 def get_broker_wallet_address(asset: Asset) -> str:
     return asset.broker_wallet_address or getattr(settings, f"BROKER_{asset.code}_WALLET_ADDRESS", "")
+
+
+def validate_buy_payment_method(asset: Asset, payment_method: str) -> None:
+    if asset.code in AUTOMATED_BUY_ASSET_CODES:
+        if payment_method not in AUTOMATED_BUY_PAYMENT_METHODS:
+            raise ValidationError(
+                f"{asset.code} purchases support Paystack bank transfer or NGN wallet only."
+            )
+        return
+
+    if payment_method not in MANUAL_BUY_PAYMENT_METHODS:
+        raise ValidationError(f"{asset.code} purchases require manual bank transfer.")
 
 
 def transition_transaction(transaction: Transaction, status: str, *, admin_user=None, note: str = "", reason: str = "") -> Transaction:
@@ -117,6 +133,7 @@ def _pay_referral_reward(user):
 def build_buy_transaction(*, user, payload):
     with db_transaction.atomic():
         quote = get_valid_quote(payload.quote_id, RateQuote.BUY)
+        validate_buy_payment_method(quote.asset, payload.payment_method)
         transaction_obj = Transaction.objects.create(
             user=user,
             quote=quote,

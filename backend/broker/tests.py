@@ -51,6 +51,25 @@ class BrokerFlowTests(TestCase):
             source="fallback",
             expires_at=timezone.now() + timedelta(minutes=10),
         )
+        self.manual_asset, _ = Asset.objects.update_or_create(
+            code="SOL",
+            defaults={
+                "name": "Solana",
+                "is_active": True,
+                "broker_wallet_address": "solbrokerwallet123",
+            },
+        )
+        self.manual_buy_quote = RateQuote.objects.create(
+            asset=self.manual_asset,
+            quote_type=RateQuote.BUY,
+            market_rate=Decimal("1600.00"),
+            markup_percent=Decimal("3.00"),
+            final_rate=Decimal("1648.00"),
+            naira_amount=Decimal("164800.00"),
+            crypto_amount=Decimal("1.00000000"),
+            source="fallback",
+            expires_at=timezone.now() + timedelta(minutes=10),
+        )
         self.sell_quote = RateQuote.objects.create(
             asset=self.asset,
             quote_type=RateQuote.SELL,
@@ -144,6 +163,70 @@ class BrokerFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertFalse(Transaction.objects.filter(payment_method=Transaction.NGN_WALLET).exists())
+
+    def test_create_automated_asset_buy_rejects_manual_bank_transfer(self):
+        response = create_buy_transaction(
+            self.make_request(self.user),
+            SimpleNamespace(
+                quote_id=self.buy_quote.id,
+                wallet_address="0xabc123",
+                network="BTC",
+                payment_method=Transaction.BANK_TRANSFER,
+            ),
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            json.loads(response.content)["detail"],
+            "['BTC purchases support Paystack bank transfer or NGN wallet only.']",
+        )
+
+    def test_create_automated_asset_buy_accepts_paystack_bank_transfer(self):
+        transaction = create_buy_transaction(
+            self.make_request(self.user),
+            SimpleNamespace(
+                quote_id=self.buy_quote.id,
+                wallet_address="0xabc123",
+                network="BTC",
+                payment_method=Transaction.PAYSTACK,
+            ),
+        )
+
+        self.assertIsInstance(transaction, Transaction)
+        self.assertEqual(transaction.status, Transaction.PENDING_PAYMENT)
+        self.assertEqual(transaction.payment_method, Transaction.PAYSTACK)
+
+    def test_create_manual_asset_buy_rejects_automated_payment_method(self):
+        response = create_buy_transaction(
+            self.make_request(self.user),
+            SimpleNamespace(
+                quote_id=self.manual_buy_quote.id,
+                wallet_address="soladdress123",
+                network="Solana",
+                payment_method=Transaction.PAYSTACK,
+            ),
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            json.loads(response.content)["detail"],
+            "['SOL purchases require manual bank transfer.']",
+        )
+
+    def test_create_manual_asset_buy_accepts_manual_bank_transfer(self):
+        transaction = create_buy_transaction(
+            self.make_request(self.user),
+            SimpleNamespace(
+                quote_id=self.manual_buy_quote.id,
+                wallet_address="soladdress123",
+                network="Solana",
+                payment_method=Transaction.BANK_TRANSFER,
+            ),
+        )
+
+        self.assertIsInstance(transaction, Transaction)
+        self.assertEqual(transaction.status, Transaction.PENDING_PAYMENT)
+        self.assertEqual(transaction.payment_method, Transaction.BANK_TRANSFER)
 
     def create_beneficiary(self):
         return BeneficiaryBankAccount.objects.create(

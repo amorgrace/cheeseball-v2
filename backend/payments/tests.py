@@ -224,6 +224,53 @@ class PaymentFlowTests(TestCase):
         self.assertEqual(self.transaction.status, Transaction.PAID)
 
     @override_settings(PAYSTACK_WEBHOOK_SECRET="sk_test_demo", PAYSTACK_CURRENCY="NGN")
+    def test_paystack_webhook_uses_requested_amount_when_fees_are_added(self):
+        self.transaction.payment_method = Transaction.PAYSTACK
+        self.transaction.save(update_fields=["payment_method"])
+        payment_record = PaymentRecord.objects.create(
+            transaction=self.transaction,
+            method=PaymentRecord.PAYSTACK,
+            provider="paystack",
+            provider_reference="cb-demo-reference",
+        )
+        webhook_body = json.dumps(
+            {
+                "event": "charge.success",
+                "data": {
+                    "reference": payment_record.provider_reference,
+                    "status": "success",
+                    "amount": 10350000,
+                    "requested_amount": 10300000,
+                    "currency": "NGN",
+                    "channel": "bank_transfer",
+                },
+            }
+        ).encode("utf-8")
+        signature = hmac.new(b"sk_test_demo", webhook_body, hashlib.sha512).hexdigest()
+
+        response = paystack_webhook(
+            SimpleNamespace(body=webhook_body),
+            SimpleNamespace(
+                event="charge.success",
+                data={
+                    "reference": payment_record.provider_reference,
+                    "status": "success",
+                    "amount": 10350000,
+                    "requested_amount": 10300000,
+                    "currency": "NGN",
+                    "channel": "bank_transfer",
+                },
+            ),
+            signature,
+        )
+
+        payment_record.refresh_from_db()
+        self.transaction.refresh_from_db()
+        self.assertEqual(response["message"], "Webhook processed")
+        self.assertEqual(payment_record.status, PaymentRecord.VERIFIED)
+        self.assertEqual(self.transaction.status, Transaction.PAID)
+
+    @override_settings(PAYSTACK_WEBHOOK_SECRET="sk_test_demo", PAYSTACK_CURRENCY="NGN")
     def test_paystack_webhook_rejects_invalid_signature(self):
         response = paystack_webhook(
             SimpleNamespace(body=b"{}"),

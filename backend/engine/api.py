@@ -3,6 +3,7 @@ from ninja import NinjaAPI
 from authenticator.router import router as auth_router
 from broker.router import router as broker_router
 from kyc.router import router as kyc_router
+from nowpayments.router import router as nowpayments_router
 from payments.router import router as payments_router
 from payouts.router import router as payouts_router
 from rates.router import router as rates_router
@@ -17,3 +18,4 @@ api.add_router("/payouts", payouts_router)
 api.add_router("/wallets", wallets_router)
 api.add_router("/payments", payments_router)
 api.add_router("/kyc", kyc_router)
+api.add_router("/nowpayments", nowpayments_router)

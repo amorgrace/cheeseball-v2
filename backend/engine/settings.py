@@ -1,5 +1,6 @@
 
 import os
+import sys
 from datetime import timedelta
 import datetime
 from pathlib import Path
@@ -110,8 +111,12 @@ WSGI_APPLICATION = 'engine.wsgi.application'
 
 
 
+database_url = os.environ.get("DATABASE_URL")
+if "test" in sys.argv:
+    database_url = os.environ.get("TEST_DATABASE_URL", database_url)
+
 DATABASES = {
-    "default": dj_database_url.config(default=os.environ.get("DATABASE_URL"))
+    "default": dj_database_url.parse(database_url)
 }
 
 
@@ -167,13 +172,16 @@ QUOTE_TTL_MINUTES = int(os.getenv("QUOTE_TTL_MINUTES", "10"))
 PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY", "")
 PAYSTACK_PUBLIC_KEY = os.getenv("PAYSTACK_PUBLIC_KEY", "")
 PAYSTACK_WEBHOOK_SECRET = os.getenv("PAYSTACK_WEBHOOK_SECRET", PAYSTACK_SECRET_KEY)
+PAYSTACK_CURRENCY = os.getenv("PAYSTACK_CURRENCY", "NGN")
+PAYSTACK_CHARGE_URL = os.getenv("PAYSTACK_CHARGE_URL", "https://api.paystack.co/charge")
+PAYSTACK_BANK_TRANSFER_EXPIRES_MINUTES = int(os.getenv("PAYSTACK_BANK_TRANSFER_EXPIRES_MINUTES", "30"))
 
 ANYMAIL = {
     "MAILTRAP_API_TOKEN": os.getenv("MAILTRAP_API_TOKEN", ""),
     "MAILTRAP_SANDBOX_ID": os.getenv("MAILTRAP_SANDBOX_ID") or None,
 }
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "anymail.backends.mailtrap.EmailBackend")
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "hello@www.cheeseballapp.com")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "CheeseBall Support <support@www.cheeseballapp.com>")
 
 BANK_ACCOUNT_NAME = os.getenv("BANK_ACCOUNT_NAME", "CheeseBall Limited")
 BANK_ACCOUNT_NUMBER = os.getenv("BANK_ACCOUNT_NUMBER", "0000000000")

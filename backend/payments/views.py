@@ -1,8 +1,14 @@
 import hashlib
 import hmac
+import json
 import uuid
+from datetime import timedelta
+from decimal import ROUND_HALF_UP
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from ninja.responses import Response
@@ -11,6 +17,59 @@ from broker.models import Transaction
 from broker.services import ensure_admin, transition_transaction
 
 from .models import PaymentRecord
+
+
+def _paystack_reference() -> str:
+    return f"cb-{uuid.uuid4().hex[:20]}"
+
+
+def _amount_to_kobo(amount) -> int:
+    return int((amount * 100).quantize(0, rounding=ROUND_HALF_UP))
+
+
+def _paystack_charge_payload(transaction, reference: str) -> dict:
+    expires_at = timezone.now() + timedelta(minutes=settings.PAYSTACK_BANK_TRANSFER_EXPIRES_MINUTES)
+    return {
+        "email": transaction.user.email,
+        "amount": str(_amount_to_kobo(transaction.naira_amount)),
+        "currency": settings.PAYSTACK_CURRENCY,
+        "reference": reference,
+        "bank_transfer": {
+            "account_expires_at": expires_at.isoformat(),
+        },
+        "metadata": {
+            "transaction_id": str(transaction.id),
+            "asset": transaction.asset_code,
+            "crypto_amount": str(transaction.crypto_amount),
+        },
+    }
+
+
+def _create_paystack_bank_transfer_charge(transaction, reference: str) -> dict:
+    if not settings.PAYSTACK_SECRET_KEY:
+        raise ValidationError("Paystack secret key is not configured")
+
+    request = Request(
+        settings.PAYSTACK_CHARGE_URL,
+        data=json.dumps(_paystack_charge_payload(transaction, reference)).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=30) as response:
+            result = json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        error_body = exc.read().decode("utf-8", errors="replace")
+        raise ValidationError(f"Paystack charge failed: {error_body}") from exc
+    except (URLError, TimeoutError, json.JSONDecodeError) as exc:
+        raise ValidationError("Unable to create Paystack bank transfer charge") from exc
+
+    if not result.get("status"):
+        raise ValidationError(result.get("message") or "Paystack charge failed")
+    return result
 
 
 def get_payment_instructions():
@@ -44,8 +103,18 @@ def setup_payment(request, payload):
         payment_record.save(update_fields=["method", "provider"])
 
     if payload.payment_method == PaymentRecord.PAYSTACK:
-        payment_record.provider_reference = f"cb_{uuid.uuid4().hex[:20]}"
-        payment_record.save(update_fields=["provider_reference"])
+        if payment_record.status != PaymentRecord.VERIFIED:
+            try:
+                reference = payment_record.provider_reference or _paystack_reference()
+                charge_response = _create_paystack_bank_transfer_charge(transaction, reference)
+            except ValidationError as e:
+                return Response({"detail": str(e)}, status=400)
+
+            payment_record.status = PaymentRecord.PENDING
+            payment_record.provider = "paystack"
+            payment_record.provider_reference = reference
+            payment_record.provider_payload = charge_response
+            payment_record.save(update_fields=["status", "provider", "provider_reference", "provider_payload"])
     elif payload.payment_method == PaymentRecord.NGN_WALLET:
         payment_record.status = PaymentRecord.VERIFIED
         payment_record.provider_reference = f"wallet_{transaction.id}"
@@ -116,19 +185,38 @@ def paystack_webhook(request, payload, signature: str | None):
     data = payload.data or {}
     reference = data.get("reference", "")
     status = data.get("status", "")
+    amount = data.get("amount")
+    currency = data.get("currency", "")
+    channel = data.get("channel", "")
     payment_record = PaymentRecord.objects.filter(provider_reference=reference, method=PaymentRecord.PAYSTACK).first()
     if not payment_record:
         return {"message": "Webhook ignored"}
 
+    transaction = payment_record.transaction
     payment_record.provider_payload = data
     payment_record.user_confirmed_at = timezone.now()
 
     if event_name == "charge.success" and status == "success":
+        expected_amount = _amount_to_kobo(transaction.naira_amount)
+        if int(amount or 0) != expected_amount or currency != settings.PAYSTACK_CURRENCY:
+            payment_record.status = PaymentRecord.PENDING_REVIEW
+            payment_record.save(update_fields=["provider_payload", "user_confirmed_at", "status"])
+            if transaction.status == Transaction.PENDING_PAYMENT:
+                transition_transaction(transaction, Transaction.PENDING_REVIEW)
+            return {"message": "Webhook requires review"}
+        if channel and channel != "bank_transfer":
+            payment_record.status = PaymentRecord.PENDING_REVIEW
+            payment_record.save(update_fields=["provider_payload", "user_confirmed_at", "status"])
+            if transaction.status == Transaction.PENDING_PAYMENT:
+                transition_transaction(transaction, Transaction.PENDING_REVIEW)
+            return {"message": "Webhook requires review"}
+
         payment_record.status = PaymentRecord.VERIFIED
         payment_record.verified_at = timezone.now()
         payment_record.save(update_fields=["provider_payload", "user_confirmed_at", "status", "verified_at"])
-        transition_transaction(payment_record.transaction, Transaction.PAID)
-    else:
+        if transaction.status == Transaction.PENDING_PAYMENT:
+            transition_transaction(transaction, Transaction.PAID)
+    elif event_name in {"charge.failed", "bank.transfer.rejected"} or status == "failed":
         payment_record.status = PaymentRecord.FAILED
         payment_record.save(update_fields=["provider_payload", "user_confirmed_at", "status"])
 

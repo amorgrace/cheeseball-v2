@@ -53,15 +53,59 @@ def get_asset_fallback_rate(asset: Asset) -> Decimal:
     return Decimal("0.00")
 
 
-def get_live_usd_ngn_rate() -> Decimal:
+COINGECKO_IDS = {
+    "BTC": "bitcoin",
+    "ETH": "ethereum",
+    "USDT": "tether",
+    "USDC": "usd-coin",
+    "BNB": "binancecoin",
+    "SOL": "solana",
+    "XRP": "ripple",
+    "TRX": "tron",
+    "LTC": "litecoin",
+    "DOGE": "dogecoin",
+    "BCH": "bitcoin-cash",
+    "ADA": "cardano",
+    "MATIC": "matic-network",
+    "DOT": "polkadot",
+    "LINK": "chainlink",
+    "AVAX": "avalanche-2",
+    "UNI": "uniswap",
+    "XLM": "stellar",
+    "ATOM": "cosmos",
+    "TON": "the-open-network",
+}
+
+
+def get_live_usd_ngn_rate() -> tuple[Decimal, str]:
+    # 1. Try Binance
     try:
         from urllib.request import Request
         req = Request("https://api.binance.com/api/v3/ticker/price?symbol=USDTNGN", headers={'User-Agent': 'Mozilla/5.0'})
         with urlopen(req, timeout=5) as response:
             payload = json.loads(response.read().decode("utf-8"))
-        return quantize_naira(Decimal(str(payload["price"])))
-    except Exception as e:
-        raise ValidationError(f"Failed to fetch live USDT/NGN rate from Binance: {str(e)}")
+        return quantize_naira(Decimal(str(payload["price"]))), "binance"
+    except Exception:
+        pass
+
+    # 2. Try CoinGecko (US Cloud compliant alternative)
+    try:
+        from urllib.request import Request
+        req = Request("https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=ngn", headers={'User-Agent': 'Mozilla/5.0'})
+        with urlopen(req, timeout=5) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        price = payload.get("tether", {}).get("ngn")
+        if price is not None:
+            return quantize_naira(Decimal(str(price))), "coingecko"
+    except Exception:
+        pass
+
+    # 3. Safe fallback for testing/offline environments
+    usd_ngn = Decimal(settings.USD_NGN_EXCHANGE_RATE)
+    if usd_ngn > 0:
+        return quantize_naira(usd_ngn), "fallback"
+
+    raise ValidationError("Failed to fetch live USDT/NGN rate from Binance and CoinGecko")
 
 
 def fetch_crypto_usd_price(asset: Asset) -> tuple[Decimal, str]:
@@ -69,30 +113,61 @@ def fetch_crypto_usd_price(asset: Asset) -> tuple[Decimal, str]:
         return Decimal("1.00000000"), "stablecoin"
 
     symbol = asset.binance_symbol
-    if not symbol:
-        raise ValidationError(f"No Binance symbol configured for asset {asset.code}")
 
-    try:
-        from urllib.request import Request
-        req = Request(settings.BINANCE_PRICE_URL_TEMPLATE.format(symbol=symbol), headers={'User-Agent': 'Mozilla/5.0'})
-        with urlopen(req, timeout=5) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-        return quantize_usd_price(Decimal(str(payload["price"]))), "binance"
-    except Exception as e:
-        raise ValidationError(f"Failed to fetch live USD price for {asset.code} from Binance: {str(e)}")
+    # 1. Try Binance (if symbol is configured)
+    if symbol:
+        try:
+            from urllib.request import Request
+            req = Request(settings.BINANCE_PRICE_URL_TEMPLATE.format(symbol=symbol), headers={'User-Agent': 'Mozilla/5.0'})
+            with urlopen(req, timeout=5) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            return quantize_usd_price(Decimal(str(payload["price"]))), "binance"
+        except Exception:
+            pass
+
+    # 2. Try CoinGecko (US Cloud compliant alternative)
+    coingecko_id = COINGECKO_IDS.get(asset.code.upper())
+    if coingecko_id:
+        try:
+            from urllib.request import Request
+            req = Request(f"https://api.coingecko.com/api/v3/simple/price?ids={coingecko_id}&vs_currencies=usd", headers={'User-Agent': 'Mozilla/5.0'})
+            with urlopen(req, timeout=5) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            price = payload.get(coingecko_id, {}).get("usd")
+            if price is not None:
+                return quantize_usd_price(Decimal(str(price))), "coingecko"
+        except Exception:
+            pass
+
+    # 3. Safe fallback for testing/offline environments
+    fallback_rate = get_asset_fallback_rate(asset)
+    if fallback_rate > 0:
+        try:
+            usd_ngn_exchange_rate = Decimal(settings.USD_NGN_EXCHANGE_RATE)
+            return quantize_usd_price(fallback_rate / usd_ngn_exchange_rate), "fallback"
+        except Exception:
+            pass
+
+    raise ValidationError(f"Failed to fetch live USD price for {asset.code} from Binance and CoinGecko")
 
 
 def fetch_market_rate(asset: Asset) -> tuple[Decimal, str]:
-    crypto_usd_price, source = fetch_crypto_usd_price(asset)
-    usd_ngn_rate = get_live_usd_ngn_rate()
+    crypto_usd_price, source_crypto = fetch_crypto_usd_price(asset)
+    usd_ngn_rate, source_fiat = get_live_usd_ngn_rate()
+    if source_crypto == "stablecoin":
+        source = source_fiat
+    elif source_crypto == source_fiat:
+        source = source_crypto
+    else:
+        source = f"{source_crypto}+{source_fiat}"
     return quantize_naira(crypto_usd_price * usd_ngn_rate), source
 
 
 def build_quote(*, asset: str, quote_type: str, naira_amount: Decimal | None = None, crypto_amount: Decimal | None = None) -> RateQuote:
     asset_obj = get_asset(asset)
     config = get_rate_configuration(asset_obj)
-    crypto_usd_price, source = fetch_crypto_usd_price(asset_obj)
-    market_rate = get_live_usd_ngn_rate()
+    crypto_usd_price, crypto_source = fetch_crypto_usd_price(asset_obj)
+    market_rate, fiat_source = get_live_usd_ngn_rate()
     buy_markup = Decimal(str(settings.BUY_MARKUP_PERCENT))
     sell_markup = Decimal(str(settings.SELL_MARKUP_PERCENT))
 
@@ -117,6 +192,13 @@ def build_quote(*, asset: str, quote_type: str, naira_amount: Decimal | None = N
         if crypto_amount is None:
             raise ValueError("crypto_amount is required for sell quotes")
         naira_amount = quantize_naira(crypto_amount * crypto_usd_price * final_rate)
+
+    if crypto_source == "stablecoin":
+        source = fiat_source
+    elif crypto_source == fiat_source:
+        source = crypto_source
+    else:
+        source = f"{crypto_source}+{fiat_source}"
 
     return RateQuote.objects.create(
         asset=asset_obj,

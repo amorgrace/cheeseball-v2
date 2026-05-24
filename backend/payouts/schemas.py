@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from ninja import Schema
@@ -29,6 +30,6 @@ class BeneficiaryBankAccountSchema(Schema):
     bank_name: str
     account_number: str
     account_type: str
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
 

@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -13,7 +14,7 @@ class ConversionPreviewSchema(Schema):
     to_amount: Decimal
     rate: Decimal
     markup_percent: Decimal
-    expires_at: str
+    expires_at: datetime
 
 
 class ConversionCreateSchema(Schema):
@@ -43,8 +44,8 @@ class ConversionSchema(Schema):
     rate: Decimal
     markup_percent: Decimal
     status: str
-    created_at: str
-    completed_at: str | None = None
+    created_at: datetime
+    completed_at: datetime | None = None
 
 
 class WithdrawalCreateSchema(Schema):
@@ -81,9 +82,9 @@ class WithdrawalSchema(Schema):
     network: str
     admin_notes: str
     rejection_reason: str
-    created_at: str
-    completed_at: str | None = None
-    reviewed_at: str | None = None
+    created_at: datetime
+    completed_at: datetime | None = None
+    reviewed_at: datetime | None = None
 
 
 class WalletBalanceSchema(Schema):
@@ -123,7 +124,7 @@ class DepositResponseSchema(Schema):
     reference_code: str
     network: str | None = None
     memo_supported: bool = False
-    created_at: str
+    created_at: datetime
 
 
 class DepositDetailSchema(Schema):
@@ -135,8 +136,8 @@ class DepositDetailSchema(Schema):
     reference_code: str
     external_reference: str | None = None
     status: str
-    created_at: str
-    completed_at: str | None = None
+    created_at: datetime
+    completed_at: datetime | None = None
 
 
 class AdminDepositCompleteSchema(Schema):

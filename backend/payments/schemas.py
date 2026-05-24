@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from ninja import Schema
@@ -46,10 +47,10 @@ class PaymentRecordSchema(Schema):
     receipt_url: str
     receipt_note: str
     provider_payload: dict
-    user_confirmed_at: str | None = None
-    verified_at: str | None = None
-    created_at: str
-    updated_at: str
+    user_confirmed_at: datetime | None = None
+    verified_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
 
 
 class PaymentInstructionsSchema(Schema):

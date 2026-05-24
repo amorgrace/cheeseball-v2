@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from ninja import Schema
@@ -41,9 +42,9 @@ class KYCSubmissionSchema(Schema):
     status: str
     admin_note: str
     reviewed_by_id: UUID | None = None
-    reviewed_at: str | None = None
-    created_at: str
-    updated_at: str
+    reviewed_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
 
 
 class KYCStatusSchema(Schema):

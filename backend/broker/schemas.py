@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -66,8 +67,8 @@ class TransactionSchema(Schema):
     bank_account_type: str
     admin_notes: str
     rejection_reason: str
-    reviewed_at: str | None = None
-    paid_at: str | None = None
-    completed_at: str | None = None
-    created_at: str
-    updated_at: str
+    reviewed_at: datetime | None = None
+    paid_at: datetime | None = None
+    completed_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime

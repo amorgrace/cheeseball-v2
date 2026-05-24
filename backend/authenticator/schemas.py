@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from django.core.validators import validate_email
@@ -57,12 +58,12 @@ class TokenSchema(Schema):
 
 class VerificationChallengeSchema(Schema):
     message: str
-    resend_available_at: str
+    resend_available_at: datetime
 
 
 class PasswordResetChallengeSchema(Schema):
     message: str
-    resend_available_at: str
+    resend_available_at: datetime
 
 
 class RefreshTokenInput(Schema):
@@ -158,7 +159,7 @@ class UserMeSchema(Schema):
     first_name: str
     last_name: str
     is_staff: bool
-    verified_at: str | None = None
+    verified_at: datetime | None = None
 
 
 class UpdateMeSchema(Schema):
@@ -169,7 +170,7 @@ class UpdateMeSchema(Schema):
 
 class ReferredUserSchema(Schema):
     email: str
-    joined_at: str
+    joined_at: datetime
 
 
 class ReferralInfoSchema(Schema):

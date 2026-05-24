@@ -55,7 +55,9 @@ def get_asset_fallback_rate(asset: Asset) -> Decimal:
 
 def get_live_usd_ngn_rate() -> Decimal:
     try:
-        with urlopen("https://api.binance.com/api/v3/ticker/price?symbol=USDTNGN", timeout=5) as response:
+        from urllib.request import Request
+        req = Request("https://api.binance.com/api/v3/ticker/price?symbol=USDTNGN", headers={'User-Agent': 'Mozilla/5.0'})
+        with urlopen(req, timeout=5) as response:
             payload = json.loads(response.read().decode("utf-8"))
         return quantize_naira(Decimal(str(payload["price"])))
     except Exception as e:
@@ -71,7 +73,9 @@ def fetch_crypto_usd_price(asset: Asset) -> tuple[Decimal, str]:
         raise ValidationError(f"No Binance symbol configured for asset {asset.code}")
 
     try:
-        with urlopen(settings.BINANCE_PRICE_URL_TEMPLATE.format(symbol=symbol), timeout=5) as response:
+        from urllib.request import Request
+        req = Request(settings.BINANCE_PRICE_URL_TEMPLATE.format(symbol=symbol), headers={'User-Agent': 'Mozilla/5.0'})
+        with urlopen(req, timeout=5) as response:
             payload = json.loads(response.read().decode("utf-8"))
         return quantize_usd_price(Decimal(str(payload["price"]))), "binance"
     except Exception as e:

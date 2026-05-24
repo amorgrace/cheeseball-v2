@@ -58,11 +58,8 @@ def get_live_usd_ngn_rate() -> Decimal:
         with urlopen("https://api.binance.com/api/v3/ticker/price?symbol=USDTNGN", timeout=5) as response:
             payload = json.loads(response.read().decode("utf-8"))
         return quantize_naira(Decimal(str(payload["price"])))
-    except (KeyError, ValueError, TypeError, URLError, TimeoutError):
-        usd_ngn_rate = Decimal(str(settings.USD_NGN_EXCHANGE_RATE))
-        if usd_ngn_rate <= 0:
-            raise ValidationError("USD_NGN_EXCHANGE_RATE must be greater than zero")
-        return quantize_naira(usd_ngn_rate)
+    except Exception as e:
+        raise ValidationError(f"Failed to fetch live USDT/NGN rate from Binance: {str(e)}")
 
 
 def fetch_crypto_usd_price(asset: Asset) -> tuple[Decimal, str]:
@@ -71,18 +68,14 @@ def fetch_crypto_usd_price(asset: Asset) -> tuple[Decimal, str]:
 
     symbol = asset.binance_symbol
     if not symbol:
-        fallback_ngn_rate = get_asset_fallback_rate(asset)
-        usd_ngn_rate = get_live_usd_ngn_rate()
-        return quantize_usd_price(fallback_ngn_rate / usd_ngn_rate), "fallback"
+        raise ValidationError(f"No Binance symbol configured for asset {asset.code}")
 
     try:
         with urlopen(settings.BINANCE_PRICE_URL_TEMPLATE.format(symbol=symbol), timeout=5) as response:
             payload = json.loads(response.read().decode("utf-8"))
         return quantize_usd_price(Decimal(str(payload["price"]))), "binance"
-    except (KeyError, ValueError, TypeError, URLError, TimeoutError):
-        fallback_ngn_rate = get_asset_fallback_rate(asset)
-        usd_ngn_rate = get_live_usd_ngn_rate()
-        return quantize_usd_price(fallback_ngn_rate / usd_ngn_rate), "fallback"
+    except Exception as e:
+        raise ValidationError(f"Failed to fetch live USD price for {asset.code} from Binance: {str(e)}")
 
 
 def fetch_market_rate(asset: Asset) -> tuple[Decimal, str]:

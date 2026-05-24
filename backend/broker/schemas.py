@@ -7,7 +7,7 @@ from pydantic import model_validator
 
 class BuyTransactionCreateSchema(Schema):
     quote_id: int
-    wallet_address: str
+    wallet_address: str | None = None
     network: str | None = None
     payment_method: str
 
@@ -15,8 +15,6 @@ class BuyTransactionCreateSchema(Schema):
     def validate_fields(self):
         if self.payment_method not in {"paystack", "bank_transfer", "ngn_wallet"}:
             raise ValueError("payment_method must be paystack, bank_transfer, or ngn_wallet")
-        if not self.wallet_address.strip():
-            raise ValueError("wallet_address is required")
         return self
 
 

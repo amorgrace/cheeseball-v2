@@ -147,15 +147,36 @@ def build_buy_transaction(*, user, payload):
             markup_percent=quote.markup_percent,
             final_rate=quote.final_rate,
             crypto_usd_price=quote.crypto_usd_price,
-            wallet_address=payload.wallet_address.strip(),
+            wallet_address=(payload.wallet_address or "").strip(),
             network=(payload.network or "").strip(),
         )
 
         if payload.payment_method == Transaction.NGN_WALLET:
             _debit_ngn_wallet_for_buy(transaction_obj)
             transition_transaction(transaction_obj, Transaction.PAID)
+            try_auto_complete_buy(transaction_obj)
 
         return transaction_obj
+
+
+def try_auto_complete_buy(transaction_obj: Transaction):
+    from wallets.models import PlatformReserve
+    
+    if transaction_obj.transaction_type != Transaction.BUY:
+        return
+    
+    if transaction_obj.status != Transaction.PAID:
+        return
+
+    try:
+        platform_reserve = PlatformReserve.objects.get(asset=transaction_obj.asset)
+        if platform_reserve.balance >= transaction_obj.crypto_amount:
+            transition_transaction(transaction_obj, Transaction.PROCESSING, note="Auto-processing verified payment")
+            transition_transaction(transaction_obj, Transaction.COMPLETED, note="Auto-completed verified payment")
+        else:
+            logger.warning("Insufficient PlatformReserve to auto-complete buy transaction %s", transaction_obj.id)
+    except PlatformReserve.DoesNotExist:
+        logger.warning("PlatformReserve not found to auto-complete buy transaction %s", transaction_obj.id)
 
 
 def _debit_ngn_wallet_for_buy(transaction_obj: Transaction) -> None:

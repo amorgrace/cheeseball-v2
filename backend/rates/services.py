@@ -53,6 +53,18 @@ def get_asset_fallback_rate(asset: Asset) -> Decimal:
     return Decimal("0.00")
 
 
+def get_live_usd_ngn_rate() -> Decimal:
+    try:
+        with urlopen("https://api.binance.com/api/v3/ticker/price?symbol=USDTNGN", timeout=5) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        return quantize_naira(Decimal(str(payload["price"])))
+    except (KeyError, ValueError, TypeError, URLError, TimeoutError):
+        usd_ngn_rate = Decimal(str(settings.USD_NGN_EXCHANGE_RATE))
+        if usd_ngn_rate <= 0:
+            raise ValidationError("USD_NGN_EXCHANGE_RATE must be greater than zero")
+        return quantize_naira(usd_ngn_rate)
+
+
 def fetch_crypto_usd_price(asset: Asset) -> tuple[Decimal, str]:
     if asset.code in {"USDT", "USDC"}:
         return Decimal("1.00000000"), "stablecoin"
@@ -60,9 +72,7 @@ def fetch_crypto_usd_price(asset: Asset) -> tuple[Decimal, str]:
     symbol = asset.binance_symbol
     if not symbol:
         fallback_ngn_rate = get_asset_fallback_rate(asset)
-        usd_ngn_rate = Decimal(str(settings.USD_NGN_EXCHANGE_RATE))
-        if usd_ngn_rate <= 0:
-            raise ValidationError("USD_NGN_EXCHANGE_RATE must be greater than zero")
+        usd_ngn_rate = get_live_usd_ngn_rate()
         return quantize_usd_price(fallback_ngn_rate / usd_ngn_rate), "fallback"
 
     try:
@@ -71,15 +81,13 @@ def fetch_crypto_usd_price(asset: Asset) -> tuple[Decimal, str]:
         return quantize_usd_price(Decimal(str(payload["price"]))), "binance"
     except (KeyError, ValueError, TypeError, URLError, TimeoutError):
         fallback_ngn_rate = get_asset_fallback_rate(asset)
-        usd_ngn_rate = Decimal(str(settings.USD_NGN_EXCHANGE_RATE))
-        if usd_ngn_rate <= 0:
-            raise ValidationError("USD_NGN_EXCHANGE_RATE must be greater than zero")
+        usd_ngn_rate = get_live_usd_ngn_rate()
         return quantize_usd_price(fallback_ngn_rate / usd_ngn_rate), "fallback"
 
 
 def fetch_market_rate(asset: Asset) -> tuple[Decimal, str]:
     crypto_usd_price, source = fetch_crypto_usd_price(asset)
-    usd_ngn_rate = Decimal(str(settings.USD_NGN_EXCHANGE_RATE))
+    usd_ngn_rate = get_live_usd_ngn_rate()
     return quantize_naira(crypto_usd_price * usd_ngn_rate), source
 
 
@@ -87,7 +95,7 @@ def build_quote(*, asset: str, quote_type: str, naira_amount: Decimal | None = N
     asset_obj = get_asset(asset)
     config = get_rate_configuration(asset_obj)
     crypto_usd_price, source = fetch_crypto_usd_price(asset_obj)
-    market_rate = quantize_naira(Decimal(str(settings.USD_NGN_EXCHANGE_RATE)))
+    market_rate = get_live_usd_ngn_rate()
     buy_markup = Decimal(str(settings.BUY_MARKUP_PERCENT))
     sell_markup = Decimal(str(settings.SELL_MARKUP_PERCENT))
 

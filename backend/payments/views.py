@@ -14,7 +14,7 @@ from django.utils import timezone
 from ninja.responses import Response
 
 from broker.models import Transaction
-from broker.services import ensure_admin, transition_transaction
+from broker.services import ensure_admin, transition_transaction, try_auto_complete_buy
 
 from .models import PaymentRecord
 
@@ -219,6 +219,7 @@ def paystack_webhook(request, payload, signature: str | None):
         payment_record.save(update_fields=["provider_payload", "user_confirmed_at", "status", "verified_at"])
         if transaction.status == Transaction.PENDING_PAYMENT:
             transition_transaction(transaction, Transaction.PAID)
+            try_auto_complete_buy(transaction)
     elif event_name in {"charge.failed", "bank.transfer.rejected"} or status == "failed":
         payment_record.status = PaymentRecord.FAILED
         payment_record.save(update_fields=["provider_payload", "user_confirmed_at", "status"])

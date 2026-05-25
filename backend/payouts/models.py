@@ -16,6 +16,7 @@ class BeneficiaryBankAccount(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="beneficiary_bank_accounts")
     account_name = models.CharField(max_length=120)
     bank_name = models.CharField(max_length=120)
+    bank_code = models.CharField(max_length=10, blank=True)
     account_number = models.CharField(max_length=30)
     account_type = models.CharField(max_length=20, choices=ACCOUNT_TYPE_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)

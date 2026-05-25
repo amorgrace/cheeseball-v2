@@ -262,6 +262,10 @@ def process_custody_ipn(payload: dict) -> dict:
     deposit.credited_at = timezone.now()
     deposit.pay_amount = credit_amount
     deposit.save(update_fields=["payment_status", "provider_payload", "pay_amount", "credited_at", "updated_at"])
+
+    # --- Auto-advance any linked sell transaction ---
+    _try_advance_sell_transaction(deposit)
+
     return {
         "message": "NOWPayments IPN processed",
         "payment_id": payment_id,
@@ -270,6 +274,27 @@ def process_custody_ipn(payload: dict) -> dict:
         "asset": asset.code,
         "amount": str(credit_amount),
     }
+
+
+def _try_advance_sell_transaction(deposit) -> None:
+    from broker.models import Transaction
+    from broker.services import transition_transaction
+
+    # Find a linked sell transaction that is pending
+    transaction = Transaction.objects.filter(
+        custody_deposit=deposit,
+        transaction_type=Transaction.SELL,
+        status=Transaction.PENDING_PAYMENT,
+    ).first()
+
+    if transaction:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info("Auto-advancing sell transaction %s because NowPayments IPN was credited", transaction.id)
+        
+        transition_transaction(transaction, Transaction.PAID, note="NowPayments deposit received")
+        transition_transaction(transaction, Transaction.PROCESSING, note="Auto-processing external wallet sell")
+        transition_transaction(transaction, Transaction.COMPLETED, note="Auto-completed external wallet sell")
 
 
 def get_nowpayments_diagnostics() -> dict:

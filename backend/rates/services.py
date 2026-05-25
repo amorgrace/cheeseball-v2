@@ -176,9 +176,15 @@ def build_quote(*, asset: str, quote_type: str, naira_amount: Decimal | None = N
     else:
         markup_percent = sell_markup
         final_rate = quantize_naira(market_rate * (Decimal("1") - (markup_percent / PERCENT_DIVISOR)))
-        if crypto_amount is None:
-            raise ValueError("crypto_amount is required for sell quotes")
-        naira_amount = quantize_naira(crypto_amount * crypto_usd_price * final_rate)
+        if crypto_amount is None and naira_amount is None:
+            raise ValueError("Either crypto_amount or naira_amount is required for sell quotes")
+        
+        if crypto_amount is not None:
+            naira_amount = quantize_naira(crypto_amount * crypto_usd_price * final_rate)
+        else:
+            if crypto_usd_price <= 0:
+                raise ValidationError(f"USD price is not configured for {asset_obj.code}")
+            crypto_amount = quantize_crypto((naira_amount / final_rate) / crypto_usd_price)
 
     if crypto_source == "stablecoin":
         source = fiat_source

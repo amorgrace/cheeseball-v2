@@ -214,6 +214,7 @@ def build_sell_transaction(*, user, payload):
     with db_transaction.atomic():
         quote = get_valid_quote(payload.quote_id, RateQuote.SELL)
         payout_method = getattr(payload, "payout_method", Transaction.PAYOUT_BANK)
+        crypto_source = getattr(payload, "crypto_source", Transaction.CRYPTO_SOURCE_EXTERNAL)
         beneficiary = None
 
         if payout_method not in {Transaction.PAYOUT_BANK, Transaction.PAYOUT_NGN_WALLET}:
@@ -224,15 +225,37 @@ def build_sell_transaction(*, user, payload):
             if not beneficiary:
                 raise ValidationError("Beneficiary bank account not found")
 
-        broker_wallet_address = (getattr(payload, "broker_wallet_address", None) or "").strip() or get_broker_wallet_address(quote.asset)
-        if not broker_wallet_address:
-            raise ValidationError(f"Broker wallet address is not configured for {quote.asset.code}")
-
         selected_network = (getattr(payload, "network", None) or "").strip() or quote.asset.network
+
+        # --- External wallet: generate NowPayments deposit address ---
+        custody_deposit = None
+        broker_wallet_address = ""
+        if crypto_source == Transaction.CRYPTO_SOURCE_EXTERNAL:
+            try:
+                from nowpayments.services import create_custody_deposit
+                custody_deposit = create_custody_deposit(
+                    user,
+                    currency=quote.asset.code,
+                    amount=quote.crypto_amount,
+                )
+                broker_wallet_address = custody_deposit.pay_address
+            except Exception:
+                logger.exception("Failed to create NowPayments deposit for sell — falling back to static address")
+                broker_wallet_address = (getattr(payload, "broker_wallet_address", None) or "").strip() or get_broker_wallet_address(quote.asset)
+
+            if not broker_wallet_address:
+                raise ValidationError(f"Broker wallet address is not configured for {quote.asset.code}")
+        else:
+            # Internal wallet: validate balance
+            from wallets.services import get_user_wallet
+            wallet = get_user_wallet(user, quote.asset)
+            if wallet.available_balance < quote.crypto_amount:
+                raise ValidationError(f"Insufficient {quote.asset.code} balance in your wallet")
 
         transaction_obj = Transaction.objects.create(
             user=user,
             quote=quote,
+            custody_deposit=custody_deposit,
             transaction_type=Transaction.SELL,
             asset=quote.asset,
             status=Transaction.PENDING_PAYMENT,
@@ -244,7 +267,7 @@ def build_sell_transaction(*, user, payload):
             crypto_usd_price=quote.crypto_usd_price,
             network=selected_network,
             broker_wallet_address=broker_wallet_address,
-            crypto_source=Transaction.CRYPTO_SOURCE_EXTERNAL,
+            crypto_source=crypto_source,
             payout_method=payout_method,
             bank_name=beneficiary.bank_name if beneficiary else "",
             bank_account_name=beneficiary.account_name if beneficiary else "",
@@ -252,7 +275,36 @@ def build_sell_transaction(*, user, payload):
             bank_account_type=beneficiary.account_type if beneficiary else "",
         )
 
+        # --- Internal wallet: lock crypto and auto-advance ---
+        if crypto_source == Transaction.CRYPTO_SOURCE_CHEESEBALL:
+            _lock_crypto_for_sell(transaction_obj)
+            transition_transaction(transaction_obj, Transaction.PAID)
+            transition_transaction(transaction_obj, Transaction.PROCESSING, note="Auto-processing internal wallet sell")
+            transition_transaction(transaction_obj, Transaction.COMPLETED, note="Auto-completed internal wallet sell")
+
         return transaction_obj
+
+
+def _lock_crypto_for_sell(transaction_obj: Transaction) -> None:
+    """Lock user's crypto balance for an internal wallet sell."""
+    from wallets.models import Ledger as WalletLedger
+    from wallets.services import get_user_wallet, record_ledger
+
+    wallet = get_user_wallet(transaction_obj.user, transaction_obj.asset)
+    if wallet.available_balance < transaction_obj.crypto_amount:
+        raise ValidationError(f"Insufficient {transaction_obj.asset.code} balance")
+
+    wallet.locked_balance += transaction_obj.crypto_amount
+    wallet.save(update_fields=["locked_balance", "updated_at"])
+
+    record_ledger(
+        transaction_obj.user,
+        wallet,
+        WalletLedger.SELL_LOCK_RELEASED,  # reuse existing ledger type for sell lock
+        transaction_obj.crypto_amount,
+        reference_id=transaction_obj.id,
+        reference_model="Transaction",
+    )
 
 
 def user_can_access(transaction: Transaction, user) -> bool:
@@ -349,7 +401,12 @@ def _finalize_transaction(transaction_obj: Transaction, admin_user=None):
             if transaction_obj.payout_method == Transaction.PAYOUT_NGN_WALLET:
                 ngn_asset = get_asset("NGN")
                 deposit_to_wallet(transaction_obj.user, ngn_asset, transaction_obj.naira_amount, notes=f"Sell {transaction_obj.id}")
-
+            elif transaction_obj.payout_method == Transaction.PAYOUT_BANK:
+                try:
+                    from payments.transfers import process_sell_payout
+                    process_sell_payout(transaction_obj)
+                except Exception:
+                    logger.exception("Paystack payout failed for transaction %s — requires manual payout", transaction_obj.id)
 
             platform_reserve.balance += transaction_obj.crypto_amount
             platform_reserve.save(update_fields=["balance"])
@@ -357,7 +414,6 @@ def _finalize_transaction(transaction_obj: Transaction, admin_user=None):
 
         else:
             raise ValidationError("Unknown transaction type for finalization")
-
 
         transaction_obj.finalized = True
         transaction_obj.save(update_fields=["finalized"])

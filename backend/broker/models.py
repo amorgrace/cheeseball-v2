@@ -53,6 +53,13 @@ class Transaction(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="transactions")
     quote = models.ForeignKey("rates.RateQuote", on_delete=models.SET_NULL, null=True, blank=True, related_name="transactions")
+    custody_deposit = models.ForeignKey(
+        "nowpayments.CustodyDeposit",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="broker_transactions",
+    )
     transaction_type = models.CharField(max_length=10, choices=TRANSACTION_TYPES)
     asset = models.ForeignKey(
         "rates.Asset",

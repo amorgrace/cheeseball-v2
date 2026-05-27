@@ -47,13 +47,13 @@ async def login(request, payload: LoginSchema):
 
 
 @router.post("/token/refresh", response=TokenSchema)
-async def token_refresh(request, payload: RefreshTokenInput):
-    return await refresh_user_token(payload)
+async def token_refresh(request, payload: RefreshTokenInput | None = None):
+    return await refresh_user_token(request, payload)
 
 
-@router.post("/logout", response=MessageSchema, auth=JWTAuth())
-async def logout(request, payload: RefreshTokenInput):
-    return await logout_user(payload)
+@router.post("/logout", response=MessageSchema)
+async def logout(request, payload: RefreshTokenInput | None = None):
+    return await logout_user(request, payload)
 
 
 @router.post("/verify-token", response=TokenSchema)

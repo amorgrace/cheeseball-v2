@@ -51,8 +51,8 @@ class LoginSchema(Schema):
 
 
 class TokenSchema(Schema):
-    access: str
-    refresh: str
+    access: str | None = None
+    refresh: str | None = None
     message: str | None = None
 
 
@@ -67,7 +67,7 @@ class PasswordResetChallengeSchema(Schema):
 
 
 class RefreshTokenInput(Schema):
-    refresh_token: str
+    refresh_token: str | None = None
 
 
 class MessageSchema(Schema):

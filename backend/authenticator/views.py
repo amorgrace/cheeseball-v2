@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone as dt_timezone
 
 from anymail.exceptions import AnymailError
 from asgiref.sync import sync_to_async
+from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
@@ -93,6 +94,66 @@ def token_matches(raw_token: str, stored_hash: str | None) -> bool:
 
 def format_dt(value):
     return value.isoformat() if value else None
+
+
+def _cookie_secure() -> bool:
+    return getattr(settings, "AUTH_COOKIE_SECURE", not settings.DEBUG)
+
+
+def _cookie_samesite() -> str:
+    return getattr(settings, "AUTH_COOKIE_SAMESITE", "Lax")
+
+
+def _cookie_domain():
+    return getattr(settings, "AUTH_COOKIE_DOMAIN", None)
+
+
+def _cookie_path() -> str:
+    return getattr(settings, "AUTH_COOKIE_PATH", "/")
+
+
+def _cookie_max_age_access() -> int:
+    return int(getattr(settings, "AUTH_ACCESS_COOKIE_MAX_AGE", 900))
+
+
+def _cookie_max_age_refresh() -> int:
+    return int(getattr(settings, "AUTH_REFRESH_COOKIE_MAX_AGE", 604800))
+
+
+def auth_success_response(*, message: str, access_token: str, refresh_token: str):
+    response = Response({"message": message})
+    cookie_common = {
+        "httponly": True,
+        "secure": _cookie_secure(),
+        "samesite": _cookie_samesite(),
+        "domain": _cookie_domain(),
+        "path": _cookie_path(),
+    }
+    response.set_cookie(
+        "access_token",
+        access_token,
+        max_age=_cookie_max_age_access(),
+        **cookie_common,
+    )
+    response.set_cookie(
+        "refresh_token",
+        refresh_token,
+        max_age=_cookie_max_age_refresh(),
+        **cookie_common,
+    )
+    return response
+
+
+def clear_auth_cookies_response(*, message: str = "Logged out successfully"):
+    response = Response({"message": message})
+    cookie_common = {
+        "domain": _cookie_domain(),
+        "path": _cookie_path(),
+        "samesite": _cookie_samesite(),
+    }
+    response.delete_cookie("access_token", **cookie_common)
+    response.delete_cookie("refresh_token", **cookie_common)
+    return response
 
 
 def is_resend_blocked(sent_at):
@@ -214,34 +275,47 @@ async def login_user(request, payload: LoginSchema):
         return Response({"detail": "Invalid credentials"}, status=401)
 
     refresh = await sync_to_async(RefreshToken.for_user)(user)
-    return {
-        "access": str(refresh.access_token),
-        "refresh": str(refresh),
-        "message": "Login successful",
-    }
+    return auth_success_response(
+        message="Login successful",
+        access_token=str(refresh.access_token),
+        refresh_token=str(refresh),
+    )
 
 
-async def refresh_user_token(payload: RefreshTokenInput):
+async def refresh_user_token(request, payload: RefreshTokenInput | None = None):
     try:
-        refresh = await sync_to_async(RefreshToken)(payload.refresh_token)
+        refresh_token = (
+            (payload.refresh_token if payload else None)
+            or request.COOKIES.get("refresh_token")
+        )
+        if not refresh_token:
+            return Response({"detail": "Missing refresh token"}, status=401)
+        refresh = await sync_to_async(RefreshToken)(refresh_token)
         user = await User.objects.aget(id=refresh.payload["user_id"])
         if is_token_issued_before_password_reset(refresh, user):
             return Response({"detail": "Invalid or expired refresh token"}, status=401)
-        return {
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
-        }
+        return auth_success_response(
+            message="Token refreshed",
+            access_token=str(refresh.access_token),
+            refresh_token=str(refresh),
+        )
     except Exception:
         return Response({"detail": "Invalid or expired refresh token"}, status=401)
 
 
-async def logout_user(payload: RefreshTokenInput):
+async def logout_user(request, payload: RefreshTokenInput | None = None):
     try:
-        token = await sync_to_async(RefreshToken)(payload.refresh_token)
+        refresh_token = (
+            (payload.refresh_token if payload else None)
+            or request.COOKIES.get("refresh_token")
+        )
+        if not refresh_token:
+            return clear_auth_cookies_response()
+        token = await sync_to_async(RefreshToken)(refresh_token)
         await sync_to_async(token.blacklist)()
-        return {"message": "Logged out successfully"}
+        return clear_auth_cookies_response()
     except Exception:
-        return Response({"detail": "Invalid token"}, status=400)
+        return clear_auth_cookies_response()
 
 
 async def verify_user_token(payload: VerifyTokenSchema):
@@ -251,11 +325,11 @@ async def verify_user_token(payload: VerifyTokenSchema):
 
     if user.is_active:
         refresh = await sync_to_async(RefreshToken.for_user)(user)
-        return {
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
-            "message": "Account already verified",
-        }
+        return auth_success_response(
+            message="Account already verified",
+            access_token=str(refresh.access_token),
+            refresh_token=str(refresh),
+        )
 
     if user.verification_failed_attempts >= MAX_TOKEN_ATTEMPTS:
         return Response({"detail": "Too many invalid verification attempts. Please request a new token."}, status=429)
@@ -286,11 +360,11 @@ async def verify_user_token(payload: VerifyTokenSchema):
     )
 
     refresh = await sync_to_async(RefreshToken.for_user)(user)
-    return {
-        "access": str(refresh.access_token),
-        "refresh": str(refresh),
-        "message": "Account verified successfully",
-    }
+    return auth_success_response(
+        message="Account verified successfully",
+        access_token=str(refresh.access_token),
+        refresh_token=str(refresh),
+    )
 
 
 async def resend_user_token(payload: ResendTokenSchema):

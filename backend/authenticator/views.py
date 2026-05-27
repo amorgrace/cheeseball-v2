@@ -121,7 +121,11 @@ def _cookie_max_age_refresh() -> int:
 
 
 def auth_success_response(*, message: str, access_token: str, refresh_token: str):
-    response = Response({"message": message})
+    response = Response({
+        "message": message,
+        "access": access_token,
+        "refresh": refresh_token,
+    })
     cookie_common = {
         "httponly": True,
         "secure": _cookie_secure(),

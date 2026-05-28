@@ -12,4 +12,4 @@ def create_buy_quote(payload: BuyQuoteInputSchema):
 
 
 def create_sell_quote(payload: SellQuoteInputSchema):
-    return build_quote(asset=payload.asset, quote_type="sell", crypto_amount=payload.crypto_amount)
+    return build_quote(asset=payload.asset, quote_type="sell", crypto_amount=payload.crypto_amount, naira_amount=payload.naira_amount)

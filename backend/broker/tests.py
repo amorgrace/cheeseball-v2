@@ -2,6 +2,7 @@ import json
 from datetime import timedelta
 from decimal import Decimal
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -12,6 +13,7 @@ from broker.views import approve_transaction, complete_transaction, create_buy_t
 from payouts.models import BeneficiaryBankAccount
 from rates.models import Asset, RateQuote
 from broker.services import transition_transaction, _finalize_transaction
+from quidax.models import QuidaxDeposit, QuidaxSubAccount, QuidaxWalletAddress
 from wallets.models import PlatformReserve, ReserveMovement, Ledger as WalletLedger, WalletBalance
 
 
@@ -25,6 +27,22 @@ class BrokerFlowTests(TestCase):
             password="secret123",
             is_staff=True,
         )
+        self.quidax_account = QuidaxSubAccount.objects.create(
+            user=self.user,
+            quidax_id="quidax-user-1",
+            email=self.user.email,
+        )
+        self.quidax_wallet_address = QuidaxWalletAddress.objects.create(
+            user=self.user,
+            sub_account=self.quidax_account,
+            currency="BTC",
+            network="Bitcoin",
+            address="bc1qquidaxwallet123",
+            status=QuidaxWalletAddress.GENERATED,
+        )
+        self.quidax_address_patcher = patch("quidax.services.ensure_wallet_address", return_value=self.quidax_wallet_address)
+        self.quidax_address_patcher.start()
+        self.addCleanup(self.quidax_address_patcher.stop)
         self.asset, _ = Asset.objects.update_or_create(
             code="BTC",
             defaults={
@@ -259,7 +277,8 @@ class BrokerFlowTests(TestCase):
         self.assertEqual(transaction.bank_account_name, beneficiary.account_name)
         self.assertEqual(transaction.bank_account_number, beneficiary.account_number)
         self.assertEqual(transaction.bank_account_type, beneficiary.account_type)
-        self.assertEqual(transaction.broker_wallet_address, "bc1qbrokerwallet123")
+        self.assertEqual(transaction.broker_wallet_address, "bc1qquidaxwallet123")
+        self.assertTrue(QuidaxDeposit.objects.filter(broker_transaction=transaction, status=QuidaxDeposit.PENDING).exists())
         wallet = WalletBalance.objects.filter(user=self.user, asset=self.asset).first()
         if wallet:
             self.assertEqual(wallet.balance, Decimal("0E-8"))

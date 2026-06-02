@@ -177,6 +177,55 @@ def admin_complete_deposit(request, deposit_id: UUID, payload: AdminDepositCompl
     }
 
 
+def fund_ngn_wallet(request, payload):
+    from payments.views import create_paystack_charge, _amount_to_kobo
+    from .models import WalletFunding
+
+    for _ in range(5):
+        reference = f"wf_{_generate_reference_code(12)}"
+        if not WalletFunding.objects.filter(reference=reference).exists():
+            break
+    else:
+        return Response({"detail": "Could not generate unique reference"}, status=500)
+
+    try:
+        amount_kobo = _amount_to_kobo(payload.amount)
+        metadata = {
+            "type": "wallet_funding",
+        }
+        charge_response = create_paystack_charge(
+            email=request.auth.email,
+            amount_kobo=amount_kobo,
+            reference=reference,
+            metadata=metadata
+        )
+    except ValidationError as e:
+        return Response({"detail": str(e)}, status=400)
+
+    funding = WalletFunding.objects.create(
+        user=request.auth,
+        amount=payload.amount,
+        reference=reference,
+        status=WalletFunding.PENDING,
+        provider_payload=charge_response,
+    )
+
+    data = charge_response.get("data", {})
+    return {
+        "id": funding.id,
+        "amount": funding.amount,
+        "reference": funding.reference,
+        "status": funding.status,
+        "authorization_url": data.get("authorization_url"),
+        "access_code": data.get("access_code"),
+        "account_number": data.get("bank_transfer", {}).get("account_number") or data.get("account_number"),
+        "bank_name": data.get("bank_transfer", {}).get("bank_name") or data.get("bank_name"),
+        "account_name": data.get("bank_transfer", {}).get("account_name") or data.get("account_name"),
+        "expires_at": data.get("bank_transfer", {}).get("account_expires_at"),
+        "created_at": funding.created_at.isoformat(),
+    }
+
+
 def preview_conversion(request, payload):
     from_asset = get_object_or_404(Asset, code=payload.from_asset)
     to_asset = get_object_or_404(Asset, code=payload.to_asset)

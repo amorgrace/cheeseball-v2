@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "payments",
     "kyc",
     "nowpayments",
+    "quidax",
 ]
 
 MIDDLEWARE = [
@@ -107,13 +108,6 @@ NINJA_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }
 
-BINANCE_PRICE_URL_TEMPLATE = os.getenv(
-    "BINANCE_PRICE_URL_TEMPLATE",
-    "https://api.binance.com/api/v3/ticker/price?symbol={symbol}",
-)
-BTC_NGN_RATE_FALLBACK = os.getenv("BTC_NGN_RATE_FALLBACK", "150000000")
-ETH_NGN_RATE_FALLBACK = os.getenv("ETH_NGN_RATE_FALLBACK", "5000000")
-USDT_NGN_RATE_FALLBACK = os.getenv("USDT_NGN_RATE_FALLBACK", "1600")
 USD_NGN_EXCHANGE_RATE = os.getenv("USD_NGN_EXCHANGE_RATE", "1600")
 BUY_MARKUP_PERCENT = os.getenv("BUY_MARKUP_PERCENT", "3.0")
 SELL_MARKUP_PERCENT = os.getenv("SELL_MARKUP_PERCENT", "2.0")
@@ -131,9 +125,15 @@ PAYSTACK_TRANSFER_URL = os.getenv("PAYSTACK_TRANSFER_URL", "https://api.paystack
 NOWPAYMENTS_API_BASE_URL = os.getenv("NOWPAYMENTS_API_BASE_URL", "https://api.nowpayments.io/v1")
 NOWPAYMENTS_API_KEY = os.getenv("NOWPAYMENTS_API_KEY", "")
 NOWPAYMENTS_IPN_SECRET = os.getenv("NOWPAYMENTS_IPN_SECRET", "")
-NOWPAYMENTS_WEBHOOK_URL = os.getenv("NOWPAYMENTS_WEBHOOK_URL", "")
+
 NOWPAYMENTS_EMAIL = os.getenv("NOWPAYMENTS_EMAIL", "")
 NOWPAYMENTS_PASSWORD = os.getenv("NOWPAYMENTS_PASSWORD", "")
+
+QUIDAX_API_BASE_URL = os.getenv("QUIDAX_API_BASE_URL", "https://openapi.quidax.io/exchange-open-api/api/v1")
+QUIDAX_API_KEY = os.getenv("QUIDAX_API_KEY", "")
+QUIDAX_SECRET_KEY = os.getenv("QUIDAX_SECRET_KEY", "")
+QUIDAX_WEBHOOK_SECRET = os.getenv("QUIDAX_WEBHOOK_SECRET", "")
+
 
 # Auth cookie settings for JWT in HttpOnly cookies
 AUTH_COOKIE_SECURE = os.getenv("AUTH_COOKIE_SECURE", "true").lower() == "true"
@@ -147,6 +147,8 @@ ANYMAIL = {
     "MAILTRAP_API_TOKEN": os.getenv("MAILTRAP_API_TOKEN", ""),
     "MAILTRAP_SANDBOX_ID": os.getenv("MAILTRAP_SANDBOX_ID") or None,
 }
+
+
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "anymail.backends.mailtrap.EmailBackend")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "CheeseBall Support <support@www.cheeseballapp.com>")
 
@@ -156,3 +158,66 @@ BANK_NAME = os.getenv("BANK_NAME", "Demo Bank")
 BROKER_BTC_WALLET_ADDRESS = os.getenv("BROKER_BTC_WALLET_ADDRESS", "")
 BROKER_ETH_WALLET_ADDRESS = os.getenv("BROKER_ETH_WALLET_ADDRESS", "")
 BROKER_USDT_WALLET_ADDRESS = os.getenv("BROKER_USDT_WALLET_ADDRESS", "")
+
+
+# ------------------------------------------------------------------------------
+# LOGGING CONFIGURATION
+# ------------------------------------------------------------------------------
+LOG_DIR = BASE_DIR / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "{levelname} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
+        },
+        "file": {
+            "level": "INFO",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": LOG_DIR / "cheeseball.log",
+            "maxBytes": 1024 * 1024 * 5,  # 5 MB
+            "backupCount": 5,
+            "formatter": "verbose",
+        },
+        "django_file": {
+            "level": "ERROR",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": LOG_DIR / "django_errors.log",
+            "maxBytes": 1024 * 1024 * 5,  # 5 MB
+            "backupCount": 5,
+            "formatter": "verbose",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console", "django_file"],
+            "level": "INFO",
+            "propagate": True,
+        },
+        "django.request": {
+            "handlers": ["django_file", "console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        # Catch all custom logs from your apps
+        "": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": True,
+        },
+    },
+}

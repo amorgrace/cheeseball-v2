@@ -143,3 +143,27 @@ class DepositDetailSchema(Schema):
 class AdminDepositCompleteSchema(Schema):
     actual_amount: Decimal
     external_reference: str | None = None
+
+
+class WalletFundingCreateSchema(Schema):
+    amount: Decimal
+
+    @model_validator(mode="after")
+    def validate_fields(self):
+        if self.amount <= 0:
+            raise ValueError("amount must be greater than 0")
+        return self
+
+
+class WalletFundingResponseSchema(Schema):
+    id: UUID
+    amount: Decimal
+    reference: str
+    status: str
+    authorization_url: str | None = None
+    access_code: str | None = None
+    account_number: str | None = None
+    bank_name: str | None = None
+    account_name: str | None = None
+    expires_at: datetime | None = None
+    created_at: datetime

@@ -20,3 +20,5 @@ Thumbs.db
 
 # Database
 db.sqlite3
+logs/
+test_quidax*.py

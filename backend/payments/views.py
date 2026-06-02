@@ -27,31 +27,26 @@ def _amount_to_kobo(amount) -> int:
     return int((amount * 100).quantize(0, rounding=ROUND_HALF_UP))
 
 
-def _paystack_charge_payload(transaction, reference: str) -> dict:
+def create_paystack_charge(email: str, amount_kobo: int, reference: str, metadata: dict | None = None) -> dict:
+    if not settings.PAYSTACK_SECRET_KEY:
+        raise ValidationError("Paystack secret key is not configured")
+
     expires_at = timezone.now() + timedelta(minutes=settings.PAYSTACK_BANK_TRANSFER_EXPIRES_MINUTES)
-    return {
-        "email": transaction.user.email,
-        "amount": str(_amount_to_kobo(transaction.naira_amount)),
+    payload = {
+        "email": email,
+        "amount": str(amount_kobo),
         "currency": settings.PAYSTACK_CURRENCY,
         "reference": reference,
         "bank_transfer": {
             "account_expires_at": expires_at.isoformat(),
         },
-        "metadata": {
-            "transaction_id": str(transaction.id),
-            "asset": transaction.asset_code,
-            "crypto_amount": str(transaction.crypto_amount),
-        },
     }
-
-
-def _create_paystack_bank_transfer_charge(transaction, reference: str) -> dict:
-    if not settings.PAYSTACK_SECRET_KEY:
-        raise ValidationError("Paystack secret key is not configured")
+    if metadata:
+        payload["metadata"] = metadata
 
     request = Request(
         settings.PAYSTACK_CHARGE_URL,
-        data=json.dumps(_paystack_charge_payload(transaction, reference)).encode("utf-8"),
+        data=json.dumps(payload).encode("utf-8"),
         headers={
             "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
             "Content-Type": "application/json",
@@ -107,7 +102,18 @@ def setup_payment(request, payload):
         if payment_record.status != PaymentRecord.VERIFIED:
             try:
                 reference = payment_record.provider_reference or _paystack_reference()
-                charge_response = _create_paystack_bank_transfer_charge(transaction, reference)
+                metadata = {
+                    "transaction_id": str(transaction.id),
+                    "asset": transaction.asset_code,
+                    "crypto_amount": str(transaction.crypto_amount),
+                }
+                amount_kobo = _amount_to_kobo(transaction.naira_amount)
+                charge_response = create_paystack_charge(
+                    email=transaction.user.email,
+                    amount_kobo=amount_kobo,
+                    reference=reference,
+                    metadata=metadata
+                )
             except ValidationError as e:
                 return Response({"detail": str(e)}, status=400)
 
@@ -192,6 +198,11 @@ def paystack_webhook(request, payload, signature: str | None):
     channel = data.get("channel", "")
     payment_record = PaymentRecord.objects.filter(provider_reference=reference, method=PaymentRecord.PAYSTACK).first()
     if not payment_record:
+        # Check if it's a WalletFunding reference
+        from wallets.models import WalletFunding
+        funding = WalletFunding.objects.filter(reference=reference).first()
+        if funding:
+            return _process_wallet_funding_webhook(funding, event_name, status, requested_amount or amount, currency, channel, data)
         return {"message": "Webhook ignored"}
 
     transaction = payment_record.transaction
@@ -225,6 +236,41 @@ def paystack_webhook(request, payload, signature: str | None):
         payment_record.save(update_fields=["provider_payload", "user_confirmed_at", "status"])
 
     return {"message": "Webhook processed"}
+
+def _process_wallet_funding_webhook(funding, event_name, status, settled_amount, currency, channel, data):
+    from wallets.services import deposit_to_wallet
+    from rates.services import get_asset
+
+    funding.provider_payload = data
+    if event_name == "charge.success" and status == "success":
+        expected_amount_kobo = _amount_to_kobo(funding.amount)
+        if int(settled_amount or 0) != expected_amount_kobo or currency != settings.PAYSTACK_CURRENCY:
+            funding.status = "failed"
+            funding.save(update_fields=["status", "provider_payload"])
+            return {"message": "Funding amount mismatch"}
+        
+        if channel and channel != "bank_transfer":
+            funding.status = "failed"
+            funding.save(update_fields=["status", "provider_payload"])
+            return {"message": "Invalid channel"}
+
+        if funding.status != "completed":
+            funding.status = "completed"
+            funding.completed_at = timezone.now()
+            funding.save(update_fields=["status", "completed_at", "provider_payload"])
+            
+            ngn_asset = get_asset("NGN")
+            deposit_to_wallet(
+                user=funding.user,
+                asset=ngn_asset,
+                amount=funding.amount,
+                notes=f"Paystack wallet funding via {funding.reference}"
+            )
+    elif event_name in {"charge.failed", "bank.transfer.rejected"} or status == "failed":
+        funding.status = "failed"
+        funding.save(update_fields=["status", "provider_payload"])
+        
+    return {"message": "Wallet funding webhook processed"}
 
 
 def paystack_transfer_webhook(request, payload, signature: str | None):

@@ -369,12 +369,31 @@ def _finalize_transaction(transaction_obj: Transaction, admin_user=None):
                 raise ValidationError(f"Insufficient platform reserve for {asset.code}")
 
 
-            deposit_to_wallet(transaction_obj.user, asset, transaction_obj.crypto_amount, notes=f"Buy {transaction_obj.id}")
+            if transaction_obj.wallet_address:
+                from quidax.services import initiate_crypto_withdrawal
+                try:
+                    quidax_response = initiate_crypto_withdrawal(
+                        transaction_obj.user,
+                        currency=asset.code,
+                        amount=transaction_obj.crypto_amount,
+                        fund_uid=transaction_obj.wallet_address,
+                        network=transaction_obj.network
+                    )
+                    current_notes = transaction_obj.admin_notes or ""
+                    transaction_obj.admin_notes = f"{current_notes}\nQuidax Tx: {quidax_response.get('id') or quidax_response}".strip()
+                except Exception as e:
+                    logger.exception("Automated Quidax payout failed")
+                    raise ValidationError(f"External payout failed: {str(e)}")
+                    
+                platform_reserve.balance -= transaction_obj.crypto_amount
+                platform_reserve.save(update_fields=["balance"])
+                ReserveMovement.objects.create(asset=asset, movement_type=ReserveMovement.OUT, amount=transaction_obj.crypto_amount, notes=f"Buy & Direct Payout {transaction_obj.id}")
+            else:
+                deposit_to_wallet(transaction_obj.user, asset, transaction_obj.crypto_amount, notes=f"Buy {transaction_obj.id}")
 
-
-            platform_reserve.balance -= transaction_obj.crypto_amount
-            platform_reserve.save(update_fields=["balance"])
-            ReserveMovement.objects.create(asset=asset, movement_type=ReserveMovement.OUT, amount=transaction_obj.crypto_amount, notes=f"Buy {transaction_obj.id}")
+                platform_reserve.balance -= transaction_obj.crypto_amount
+                platform_reserve.save(update_fields=["balance"])
+                ReserveMovement.objects.create(asset=asset, movement_type=ReserveMovement.OUT, amount=transaction_obj.crypto_amount, notes=f"Buy {transaction_obj.id}")
 
 
         elif transaction_obj.transaction_type == Transaction.SELL:

@@ -110,3 +110,11 @@ def admin_deposits_list(request, status: str | None = None):
 @router.post("/admin/deposits/{deposit_id}/complete", response=DepositDetailSchema, auth=JWTAuth())
 def admin_deposit_complete(request, deposit_id: UUID, payload: AdminDepositCompleteSchema):
     return admin_complete_deposit(request, deposit_id, payload)
+
+
+from .schemas import WalletFundingCreateSchema, WalletFundingResponseSchema
+from .views import fund_ngn_wallet
+
+@router.post("/fund/ngn", response=WalletFundingResponseSchema, auth=JWTAuth())
+def fund_ngn(request, payload: WalletFundingCreateSchema):
+    return fund_ngn_wallet(request, payload)

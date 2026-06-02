@@ -160,16 +160,11 @@ def perform_conversion(user, rate_lock: RateLock) -> Conversion:
 
 @transaction.atomic
 def create_withdrawal(user, asset: Asset, amount, bank_name="", bank_account_name="", bank_account_number="", wallet_address="", network=""):
-
-    if asset.code != NGN_CODE:
-        raise ValidationError("Withdrawals are only supported for NGN wallet")
-
     wallet = get_user_wallet(user, asset)
     if wallet.available_balance < amount:
         raise ValidationError(f"Insufficient balance in {asset.code}")
 
-
-    return Withdrawal.objects.create(
+    withdrawal = Withdrawal.objects.create(
         user=user,
         asset=asset,
         amount=amount,
@@ -180,6 +175,36 @@ def create_withdrawal(user, asset: Asset, amount, bank_name="", bank_account_nam
         wallet_address=wallet_address,
         network=network,
     )
+
+    if asset.code != NGN_CODE:
+        if not wallet_address:
+            raise ValidationError("Wallet address is required for crypto withdrawals")
+
+        from quidax.services import initiate_crypto_withdrawal
+        import logging
+        logger = logging.getLogger(__name__)
+
+        try:
+            quidax_response = initiate_crypto_withdrawal(
+                user,
+                currency=asset.code,
+                amount=amount,
+                fund_uid=wallet_address,
+                network=network
+            )
+            withdrawal.admin_notes = f"Quidax Tx: {quidax_response.get('id') or quidax_response}"
+            withdrawal.save(update_fields=["admin_notes"])
+            
+            complete_withdrawal(withdrawal)
+            
+        except Exception as e:
+            logger.exception("Quidax crypto withdrawal failed")
+            withdrawal.rejection_reason = str(e)
+            withdrawal.status = Withdrawal.FAILED
+            withdrawal.save(update_fields=["rejection_reason", "status"])
+            raise ValidationError(f"External crypto withdrawal failed: {str(e)}")
+
+    return withdrawal
 
 
 @transaction.atomic

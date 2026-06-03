@@ -164,7 +164,13 @@ BROKER_USDT_WALLET_ADDRESS = os.getenv("BROKER_USDT_WALLET_ADDRESS", "")
 # LOGGING CONFIGURATION
 # ------------------------------------------------------------------------------
 LOG_DIR = BASE_DIR / "logs"
-LOG_DIR.mkdir(exist_ok=True)
+
+# Detect if we can write to the filesystem (Vercel's /var/task is read-only)
+_USE_FILE_LOGGING = True
+try:
+    LOG_DIR.mkdir(exist_ok=True)
+except OSError:
+    _USE_FILE_LOGGING = False
 
 LOGGING = {
     "version": 1,
@@ -183,41 +189,46 @@ LOGGING = {
         "console": {
             "level": "INFO",
             "class": "logging.StreamHandler",
-            "formatter": "simple",
-        },
-        "file": {
-            "level": "INFO",
-            "class": "logging.handlers.RotatingFileHandler",
-            "filename": LOG_DIR / "cheeseball.log",
-            "maxBytes": 1024 * 1024 * 5,  # 5 MB
-            "backupCount": 5,
-            "formatter": "verbose",
-        },
-        "django_file": {
-            "level": "ERROR",
-            "class": "logging.handlers.RotatingFileHandler",
-            "filename": LOG_DIR / "django_errors.log",
-            "maxBytes": 1024 * 1024 * 5,  # 5 MB
-            "backupCount": 5,
-            "formatter": "verbose",
+            "formatter": "verbose" if not _USE_FILE_LOGGING else "simple",
         },
     },
     "loggers": {
         "django": {
-            "handlers": ["console", "django_file"],
+            "handlers": ["console"],
             "level": "INFO",
             "propagate": True,
         },
         "django.request": {
-            "handlers": ["django_file", "console"],
+            "handlers": ["console"],
             "level": "ERROR",
             "propagate": False,
         },
-        # Catch all custom logs from your apps
         "": {
-            "handlers": ["console", "file"],
+            "handlers": ["console"],
             "level": "INFO",
             "propagate": True,
         },
     },
 }
+
+# Add file handlers only when the filesystem is writable (local dev)
+if _USE_FILE_LOGGING:
+    LOGGING["handlers"]["file"] = {
+        "level": "INFO",
+        "class": "logging.handlers.RotatingFileHandler",
+        "filename": LOG_DIR / "cheeseball.log",
+        "maxBytes": 1024 * 1024 * 5,  # 5 MB
+        "backupCount": 5,
+        "formatter": "verbose",
+    }
+    LOGGING["handlers"]["django_file"] = {
+        "level": "ERROR",
+        "class": "logging.handlers.RotatingFileHandler",
+        "filename": LOG_DIR / "django_errors.log",
+        "maxBytes": 1024 * 1024 * 5,  # 5 MB
+        "backupCount": 5,
+        "formatter": "verbose",
+    }
+    LOGGING["loggers"]["django"]["handlers"].append("django_file")
+    LOGGING["loggers"]["django.request"]["handlers"].append("django_file")
+    LOGGING["loggers"][""]["handlers"].append("file")

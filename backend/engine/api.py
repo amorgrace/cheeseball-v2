@@ -3,11 +3,13 @@ from ninja import NinjaAPI
 
 from authenticator.router import router as auth_router
 from broker.router import router as broker_router
+from engine.admin_router import router as admin_router
 from kyc.router import router as kyc_router
 from payments.router import router as payments_router
 from payouts.router import router as payouts_router
 from quidax.router import router as quidax_router
 from rates.router import router as rates_router
+from notifications.router import router as notifications_router
 from wallets.router import router as wallets_router
 
 logger = logging.getLogger(__name__)
@@ -73,3 +75,5 @@ api.add_router("/wallets", wallets_router)
 api.add_router("/payments", payments_router)
 api.add_router("/kyc", kyc_router)
 api.add_router("/quidax", quidax_router)
+api.add_router("/notifications", notifications_router)
+api.add_router("/admin", admin_router)

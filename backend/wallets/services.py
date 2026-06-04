@@ -257,4 +257,21 @@ def deposit_to_wallet(user, asset: Asset, amount, notes=""):
     wallet.save(update_fields=["balance", "updated_at"])
 
     record_ledger(user, wallet, Ledger.WALLET_DEPOSIT, amount, notes=notes)
+
+    # --- Notify user ---
+    from notifications.models import Notification
+    from notifications.services import notify
+
+    if asset.code == NGN_CODE:
+        formatted = f"₦{amount:,.2f}"
+    else:
+        formatted = f"{amount} {asset.code}"
+
+    notify(
+        user,
+        title="Deposit Received",
+        message=f"{formatted} has been credited to your {asset.code} wallet.",
+        notification_type=Notification.DEPOSIT_RECEIVED,
+    )
+
     return wallet

@@ -107,6 +107,9 @@ def transition_transaction(transaction: Transaction, status: str, *, admin_user=
 
             raise
 
+    # --- Send in-app notification ---
+    _notify_transaction_status(transaction, status)
+
     return transaction
 
 
@@ -114,10 +117,51 @@ REFERRAL_REWARD_NGN = Decimal("1000.00")
 logger = logging.getLogger(__name__)
 
 
+def _notify_transaction_status(transaction: Transaction, status: str):
+    """Send an in-app notification when a transaction reaches a terminal status."""
+    from notifications.models import Notification
+    from notifications.services import notify
+
+    txn_type = transaction.transaction_type.capitalize()
+    asset_code = transaction.asset.code
+    amount = transaction.crypto_amount
+
+    if status == Transaction.COMPLETED:
+        notify(
+            transaction.user,
+            title=f"{txn_type} Order Completed",
+            message=f"Your {txn_type.lower()} order for {amount} {asset_code} has been completed successfully.",
+            notification_type=Notification.TRANSACTION_COMPLETED,
+            reference_id=transaction.id,
+            reference_type="Transaction",
+        )
+    elif status == Transaction.FAILED:
+        notify(
+            transaction.user,
+            title=f"{txn_type} Order Failed",
+            message=f"Your {txn_type.lower()} order for {amount} {asset_code} has failed. Please contact support.",
+            notification_type=Notification.TRANSACTION_FAILED,
+            reference_id=transaction.id,
+            reference_type="Transaction",
+        )
+    elif status == Transaction.REJECTED:
+        reason = transaction.rejection_reason or "No reason provided."
+        notify(
+            transaction.user,
+            title=f"{txn_type} Order Rejected",
+            message=f"Your {txn_type.lower()} order for {amount} {asset_code} was rejected. Reason: {reason}",
+            notification_type=Notification.TRANSACTION_REJECTED,
+            reference_id=transaction.id,
+            reference_type="Transaction",
+        )
+
+
 def _pay_referral_reward(user):
     if user.referral_reward_paid or not user.referred_by_id:
         return
 
+    from notifications.models import Notification
+    from notifications.services import notify
     from rates.services import get_asset
     from wallets.services import deposit_to_wallet
 
@@ -126,6 +170,14 @@ def _pay_referral_reward(user):
         deposit_to_wallet(user.referred_by, ngn, REFERRAL_REWARD_NGN, notes=f"Referral reward for {user.email}")
         user.referral_reward_paid = True
         user.save(update_fields=["referral_reward_paid"])
+
+        # Notify the referrer
+        notify(
+            user.referred_by,
+            title="Referral Reward Received!",
+            message=f"You earned ₦{REFERRAL_REWARD_NGN:,.0f} because {user.email} completed their first trade.",
+            notification_type=Notification.REFERRAL_REWARD,
+        )
     except Exception:
         logger.exception("Failed to pay referral reward for %s", user.email)
 

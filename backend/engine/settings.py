@@ -20,12 +20,14 @@ ALLOWED_HOSTS = [host.strip() for host in os.getenv("ALLOWED_HOSTS", "").split("
 CORS_ALLOWED_ORIGINS = [origin.strip() for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if origin.strip()]
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.*\.vercel\.app$",
+    r"^http://localhost:3000$",
 ]
 CORS_ALLOW_CREDENTIALS = os.getenv("CORS_ALLOW_CREDENTIALS", "true").lower() == "true"
 CSRF_TRUSTED_ORIGINS = [
     "https://cheeseballapp.com",
     "https://www.cheeseballapp.com",
     "https://*.vercel.app",
+    "http://localhost:3000",
 ]
 
 INSTALLED_APPS = [
@@ -48,6 +50,7 @@ INSTALLED_APPS = [
     "kyc",
     "nowpayments",
     "quidax",
+    "notifications",
 ]
 
 MIDDLEWARE = [

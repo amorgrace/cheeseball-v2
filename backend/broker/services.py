@@ -488,3 +488,24 @@ def _finalize_transaction(transaction_obj: Transaction, admin_user=None):
 
         transaction_obj.finalized = True
         transaction_obj.save(update_fields=["finalized"])
+
+
+def expire_stale_transactions():
+    """Fail transactions that have been stuck in PENDING_PAYMENT for over 24 hours."""
+    from datetime import timedelta
+    cutoff = timezone.now() - timedelta(hours=24)
+    
+    stale_txns = Transaction.objects.filter(
+        status=Transaction.PENDING_PAYMENT,
+        created_at__lte=cutoff
+    )
+    
+    count = 0
+    for txn in stale_txns:
+        try:
+            transition_transaction(txn, Transaction.FAILED, reason="Expired after 24 hours of inactivity")
+            count += 1
+        except Exception:
+            logger.exception("Failed to auto-expire transaction %s", txn.id)
+            
+    return count

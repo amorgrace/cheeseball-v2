@@ -11,10 +11,10 @@ from .views import (
     confirm_sell_crypto_sent,
     create_buy_transaction,
     create_sell_transaction,
-    fail_transaction,
     get_transaction,
     list_transactions,
     reject_transaction,
+    expire_stale_transactions_view,
 )
 
 router = Router(tags=["Broker"])
@@ -63,4 +63,10 @@ def admin_complete(request, transaction_id: UUID, payload: TransactionActionSche
 @router.post("/admin/transactions/{transaction_id}/fail", response=TransactionSchema, auth=JWTAuth())
 def admin_fail(request, transaction_id: UUID, payload: TransactionActionSchema):
     return fail_transaction(request, transaction_id, payload)
+
+
+@router.get("/cron/expire-transactions")
+def expire_transactions_cron(request):
+    """Cron endpoint to expire stale pending transactions. No auth required since it only performs a safe automated task."""
+    return expire_stale_transactions_view(request)
 

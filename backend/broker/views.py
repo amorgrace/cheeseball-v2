@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404
 from ninja.responses import Response
 
 from .models import Transaction
-from .services import build_buy_transaction, build_sell_transaction, ensure_admin, transition_transaction, user_can_access
+from .services import build_buy_transaction, build_sell_transaction, ensure_admin, transition_transaction, user_can_access, expire_stale_transactions
 
 
 def create_buy_transaction(request, payload):
@@ -77,3 +77,9 @@ def fail_transaction(request, transaction_id: UUID, payload):
         return transition_transaction(transaction, Transaction.FAILED, admin_user=request.auth, note=payload.note or "")
     except ValidationError as e:
         return Response({"detail": str(e)}, status=400)
+
+
+def expire_stale_transactions_view(request):
+    """Cron endpoint to expire stale pending transactions."""
+    count = expire_stale_transactions()
+    return {"detail": f"Successfully expired {count} stale transactions."}

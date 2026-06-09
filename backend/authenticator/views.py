@@ -189,6 +189,7 @@ async def register_user(payload: RegisterSchema):
         await sync_to_async(_register_user_with_transaction)(
             email=email,
             password=payload.password,
+            fullname=payload.fullname or "",
             first_name=first_name,
             last_name=last_name,
             phone_number=payload.phone_number,
@@ -221,6 +222,7 @@ def _register_user_with_transaction(
     *,
     email: str,
     password: str,
+    fullname: str,
     first_name: str,
     last_name: str,
     phone_number: str | None,
@@ -237,6 +239,7 @@ def _register_user_with_transaction(
         User.objects.create_user(
             email=email,
             password=password,
+            fullname=fullname,
             first_name=first_name,
             last_name=last_name,
             phone_number=phone_number,
@@ -537,8 +540,7 @@ async def get_current_user(request):
         "email": user.email,
         "phone_number": user.phone_number,
         "referral_code": user.referral_code,
-        "first_name": user.first_name,
-        "last_name": user.last_name,
+        "fullname": user.fullname,
         "is_staff": user.is_staff,
         "verified_at": format_dt(user.verified_at),
     }
@@ -548,7 +550,7 @@ async def update_current_user(request, payload: UpdateMeSchema):
     user = request.auth
     update_fields = []
 
-    for field in ("first_name", "last_name", "phone_number"):
+    for field in ("fullname", "phone_number"):
         value = getattr(payload, field)
         if value is not None:
             setattr(user, field, value.strip() if isinstance(value, str) else value)

@@ -156,15 +156,13 @@ class UserMeSchema(Schema):
     email: str
     phone_number: str | None = None
     referral_code: str
-    first_name: str
-    last_name: str
+    fullname: str
     is_staff: bool
     verified_at: datetime | None = None
 
 
 class UpdateMeSchema(Schema):
-    first_name: str | None = None
-    last_name: str | None = None
+    fullname: str | None = None
     phone_number: str | None = None
 
 

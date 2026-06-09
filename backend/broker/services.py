@@ -279,23 +279,25 @@ def build_sell_transaction(*, user, payload):
 
         selected_network = (getattr(payload, "network", None) or "").strip() or quote.asset.network
 
-        # --- External wallet: generate NowPayments deposit address ---
+        # --- External wallet: generate Quidax deposit address ---
         custody_deposit = None
         broker_wallet_address = ""
+        quidax_wallet_address_obj = None
+
         if crypto_source == Transaction.CRYPTO_SOURCE_EXTERNAL:
             try:
-                from nowpayments.services import create_custody_deposit
-                custody_deposit = create_custody_deposit(
+                from quidax.services import ensure_wallet_address
+                quidax_wallet_address_obj = ensure_wallet_address(
                     user,
                     currency=quote.asset.code,
-                    amount=quote.crypto_amount,
+                    network=selected_network,
                 )
-                broker_wallet_address = custody_deposit.pay_address
+                broker_wallet_address = quidax_wallet_address_obj.address
             except Exception:
-                logger.exception("Failed to create NowPayments deposit for sell — falling back to static address")
+                logger.exception("Failed to create Quidax deposit wallet for sell — falling back to static address")
                 broker_wallet_address = (getattr(payload, "broker_wallet_address", None) or "").strip() or get_broker_wallet_address(quote.asset)
 
-            if not broker_wallet_address:
+            if not broker_wallet_address and not quidax_wallet_address_obj:
                 raise ValidationError(f"Broker wallet address is not configured for {quote.asset.code}")
         else:
             # Internal wallet: validate balance
@@ -326,6 +328,13 @@ def build_sell_transaction(*, user, payload):
             bank_account_number=beneficiary.account_number if beneficiary else "",
             bank_account_type=beneficiary.account_type if beneficiary else "",
         )
+
+        if crypto_source == Transaction.CRYPTO_SOURCE_EXTERNAL and quidax_wallet_address_obj:
+            from quidax.services import create_pending_sell_deposit
+            create_pending_sell_deposit(
+                transaction_obj=transaction_obj,
+                wallet_address=quidax_wallet_address_obj
+            )
 
         # --- Internal wallet: lock crypto and auto-advance ---
         if crypto_source == Transaction.CRYPTO_SOURCE_CHEESEBALL:

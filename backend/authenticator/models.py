@@ -65,6 +65,7 @@ class CustomUser(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     username = None
     email = models.EmailField(unique=True)
+    fullname = models.CharField(max_length=150, blank=True, default="")
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     referral_code = models.CharField(max_length=10, unique=True, blank=True)
     referred_by = models.ForeignKey(

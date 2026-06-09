@@ -43,10 +43,8 @@ class Transaction(models.Model):
         (CRYPTO_SOURCE_CHEESEBALL, "CheeseBall wallet"),
         (CRYPTO_SOURCE_EXTERNAL, "External wallet"),
     )
-    PAYOUT_BANK = "beneficiary_bank"
     PAYOUT_NGN_WALLET = "ngn_wallet"
     PAYOUT_METHOD_CHOICES = (
-        (PAYOUT_BANK, "Beneficiary bank"),
         (PAYOUT_NGN_WALLET, "NGN wallet"),
     )
 

@@ -11,6 +11,7 @@ from .views import (
     confirm_sell_crypto_sent,
     create_buy_transaction,
     create_sell_transaction,
+    fail_transaction,
     get_transaction,
     list_transactions,
     reject_transaction,

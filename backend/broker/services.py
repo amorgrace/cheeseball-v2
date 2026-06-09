@@ -265,17 +265,12 @@ def _debit_ngn_wallet_for_buy(transaction_obj: Transaction) -> None:
 def build_sell_transaction(*, user, payload):
     with db_transaction.atomic():
         quote = get_valid_quote(payload.quote_id, RateQuote.SELL)
-        payout_method = getattr(payload, "payout_method", Transaction.PAYOUT_BANK)
+        payout_method = getattr(payload, "payout_method", Transaction.PAYOUT_NGN_WALLET)
         crypto_source = getattr(payload, "crypto_source", Transaction.CRYPTO_SOURCE_EXTERNAL)
         beneficiary = None
 
-        if payout_method not in {Transaction.PAYOUT_BANK, Transaction.PAYOUT_NGN_WALLET}:
-            raise ValidationError("payout_method must be beneficiary_bank or ngn_wallet")
-
-        if payout_method == Transaction.PAYOUT_BANK:
-            beneficiary = BeneficiaryBankAccount.objects.filter(id=payload.beneficiary_id, user=user).first()
-            if not beneficiary:
-                raise ValidationError("Beneficiary bank account not found")
+        if payout_method != Transaction.PAYOUT_NGN_WALLET:
+            raise ValidationError("payout_method must be ngn_wallet")
 
         selected_network = (getattr(payload, "network", None) or "").strip() or quote.asset.network
 
@@ -293,12 +288,28 @@ def build_sell_transaction(*, user, payload):
                     network=selected_network,
                 )
                 broker_wallet_address = quidax_wallet_address_obj.address
-            except Exception:
-                logger.exception("Failed to create Quidax deposit wallet for sell — falling back to static address")
-                broker_wallet_address = (getattr(payload, "broker_wallet_address", None) or "").strip() or get_broker_wallet_address(quote.asset)
-
-            if not broker_wallet_address and not quidax_wallet_address_obj:
-                raise ValidationError(f"Broker wallet address is not configured for {quote.asset.code}")
+            except Exception as exc:
+                logger.exception("Failed to create Quidax deposit wallet for sell — will use PENDING status")
+                # Create a PENDING wallet address record so the transaction can proceed.
+                # The frontend will poll and the webhook will update the address when Quidax responds.
+                from quidax.services import ensure_sub_account
+                from quidax.models import QuidaxWalletAddress, QuidaxSubAccount
+                try:
+                    sub_account = ensure_sub_account(user)
+                    quidax_wallet_address_obj, _ = QuidaxWalletAddress.objects.get_or_create(
+                        user=user,
+                        currency=quote.asset.code.upper(),
+                        network=selected_network,
+                        defaults={
+                            "sub_account": sub_account,
+                            "address": "",
+                            "status": QuidaxWalletAddress.PENDING,
+                            "provider_payload": {"error": str(exc)},
+                        },
+                    )
+                except Exception:
+                    logger.exception("Failed to create PENDING Quidax wallet address record")
+                broker_wallet_address = ""
         else:
             # Internal wallet: validate balance
             from wallets.services import get_user_wallet
@@ -481,12 +492,6 @@ def _finalize_transaction(transaction_obj: Transaction, admin_user=None):
             if transaction_obj.payout_method == Transaction.PAYOUT_NGN_WALLET:
                 ngn_asset = get_asset("NGN")
                 deposit_to_wallet(transaction_obj.user, ngn_asset, transaction_obj.naira_amount, notes=f"Sell {transaction_obj.id}")
-            elif transaction_obj.payout_method == Transaction.PAYOUT_BANK:
-                try:
-                    from payments.transfers import process_sell_payout
-                    process_sell_payout(transaction_obj)
-                except Exception:
-                    logger.exception("Paystack payout failed for transaction %s — requires manual payout", transaction_obj.id)
 
             platform_reserve.balance += transaction_obj.crypto_amount
             platform_reserve.save(update_fields=["balance"])

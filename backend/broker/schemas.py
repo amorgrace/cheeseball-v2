@@ -22,8 +22,7 @@ class BuyTransactionCreateSchema(Schema):
 class SellTransactionCreateSchema(Schema):
     quote_id: int
     crypto_source: str = "external_wallet"
-    payout_method: str = "beneficiary_bank"
-    beneficiary_id: UUID | None = None
+    payout_method: str = "ngn_wallet"
     network: str | None = None
     broker_wallet_address: str | None = None
 
@@ -31,10 +30,8 @@ class SellTransactionCreateSchema(Schema):
     def validate_fields(self):
         if self.crypto_source not in {"external_wallet", "cheeseball_wallet"}:
             raise ValueError("crypto_source must be external_wallet or cheeseball_wallet")
-        if self.payout_method not in {"beneficiary_bank", "ngn_wallet"}:
-            raise ValueError("payout_method must be beneficiary_bank or ngn_wallet")
-        if self.payout_method == "beneficiary_bank" and not self.beneficiary_id:
-            raise ValueError("beneficiary_id is required when payout_method is beneficiary_bank")
+        if self.payout_method != "ngn_wallet":
+            raise ValueError("payout_method must be ngn_wallet")
         return self
 
 

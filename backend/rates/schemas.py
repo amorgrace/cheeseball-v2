@@ -55,3 +55,8 @@ class RateQuoteSchema(Schema):
     crypto_amount: Decimal | None = None
     source: str
     expires_at: datetime
+
+
+class UsdNgnRateSchema(Schema):
+    rate: Decimal
+    source: str

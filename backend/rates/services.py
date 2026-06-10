@@ -78,11 +78,7 @@ COINGECKO_IDS = {
 
 
 def get_live_usd_ngn_rate() -> tuple[Decimal, str]:
-    import sys
-    if "test" in sys.argv:
-        return quantize_naira(Decimal(settings.USD_NGN_EXCHANGE_RATE)), "fallback"
-
-    # 1. Try CoinGecko (Primary Live Source)
+    # Try CoinGecko (Primary Live Source)
     try:
         from urllib.request import Request
         req = Request("https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=ngn", headers={'User-Agent': 'Mozilla/5.0'})
@@ -94,11 +90,6 @@ def get_live_usd_ngn_rate() -> tuple[Decimal, str]:
     except Exception:
         pass
 
-    # 3. Safe fallback for testing/offline environments
-    usd_ngn = Decimal(settings.USD_NGN_EXCHANGE_RATE)
-    if usd_ngn > 0:
-        return quantize_naira(usd_ngn), "fallback"
-
     raise ValidationError("Failed to fetch live USDT/NGN rate from CoinGecko")
 
 
@@ -106,13 +97,7 @@ def fetch_crypto_usd_price(asset: Asset) -> tuple[Decimal, str]:
     if asset.code in {"USDT", "USDC"}:
         return Decimal("1.00000000"), "stablecoin"
 
-    import sys
-    if "test" in sys.argv:
-        fallback_rate = get_asset_fallback_rate(asset)
-        usd_ngn = Decimal(settings.USD_NGN_EXCHANGE_RATE)
-        return quantize_usd_price(fallback_rate / usd_ngn), "fallback"
-
-    # 1. Try CoinGecko (Primary Live Source)
+    # Try CoinGecko (Primary Live Source)
     coingecko_id = COINGECKO_IDS.get(asset.code.upper())
     if coingecko_id:
         try:
@@ -123,15 +108,6 @@ def fetch_crypto_usd_price(asset: Asset) -> tuple[Decimal, str]:
             price = payload.get(coingecko_id, {}).get("usd")
             if price is not None:
                 return quantize_usd_price(Decimal(str(price))), "coingecko"
-        except Exception:
-            pass
-
-    # 3. Safe fallback for testing/offline environments
-    fallback_rate = get_asset_fallback_rate(asset)
-    if fallback_rate > 0:
-        try:
-            usd_ngn_exchange_rate = Decimal(settings.USD_NGN_EXCHANGE_RATE)
-            return quantize_usd_price(fallback_rate / usd_ngn_exchange_rate), "fallback"
         except Exception:
             pass
 

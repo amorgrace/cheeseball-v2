@@ -5,6 +5,7 @@ from urllib.error import URLError
 from urllib.request import urlopen
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
@@ -78,6 +79,11 @@ COINGECKO_IDS = {
 
 
 def get_live_usd_ngn_rate() -> tuple[Decimal, str]:
+    cache_key = "coingecko_usd_ngn_rate"
+    cached_rate = cache.get(cache_key)
+    if cached_rate:
+        return cached_rate, "coingecko_cached"
+
     # Try CoinGecko (Primary Live Source)
     try:
         from urllib.request import Request
@@ -86,9 +92,11 @@ def get_live_usd_ngn_rate() -> tuple[Decimal, str]:
             payload = json.loads(response.read().decode("utf-8"))
         price = payload.get("tether", {}).get("ngn")
         if price is not None:
-            return quantize_naira(Decimal(str(price))), "coingecko"
-    except Exception:
-        pass
+            rate = quantize_naira(Decimal(str(price)))
+            cache.set(cache_key, rate, 60 * 5)  # Cache for 5 minutes
+            return rate, "coingecko"
+    except Exception as e:
+        print(f"CoinGecko error: {e}")
 
     raise ValidationError("Failed to fetch live USDT/NGN rate from CoinGecko")
 
@@ -100,6 +108,11 @@ def fetch_crypto_usd_price(asset: Asset) -> tuple[Decimal, str]:
     # Try CoinGecko (Primary Live Source)
     coingecko_id = COINGECKO_IDS.get(asset.code.upper())
     if coingecko_id:
+        cache_key = f"coingecko_usd_price_{coingecko_id}"
+        cached_price = cache.get(cache_key)
+        if cached_price:
+            return cached_price, "coingecko_cached"
+
         try:
             from urllib.request import Request
             req = Request(f"https://api.coingecko.com/api/v3/simple/price?ids={coingecko_id}&vs_currencies=usd", headers={'User-Agent': 'Mozilla/5.0'})
@@ -107,9 +120,11 @@ def fetch_crypto_usd_price(asset: Asset) -> tuple[Decimal, str]:
                 payload = json.loads(response.read().decode("utf-8"))
             price = payload.get(coingecko_id, {}).get("usd")
             if price is not None:
-                return quantize_usd_price(Decimal(str(price))), "coingecko"
-        except Exception:
-            pass
+                parsed_price = quantize_usd_price(Decimal(str(price)))
+                cache.set(cache_key, parsed_price, 60 * 5)  # Cache for 5 minutes
+                return parsed_price, "coingecko"
+        except Exception as e:
+            print(f"CoinGecko error: {e}")
 
     raise ValidationError(f"Failed to fetch live USD price for {asset.code} from CoinGecko")
 

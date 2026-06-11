@@ -1,4 +1,5 @@
 from datetime import datetime
+from uuid import UUID
 
 from ninja import Schema
 from pydantic import model_validator

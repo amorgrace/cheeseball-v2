@@ -95,3 +95,19 @@ async def update_me(request, payload: UpdateMeSchema):
 async def referral(request):
     return await get_referral_info(request)
 
+
+# Added for internal transfers recipient lookup
+from ninja import Schema
+
+class UserLookupResponse(Schema):
+    id: str
+    email: str
+    fullname: str
+
+
+@router.get("/users/lookup", response=UserLookupResponse, auth=JWTAuth())
+async def user_lookup(request, email: str):
+    from .views import lookup_user
+    return await lookup_user(request, email)
+
+

@@ -5,12 +5,26 @@ from decimal import Decimal
 
 
 class Asset(models.Model):
+    WITHDRAWAL_MODE_AUTO = "auto"
+    WITHDRAWAL_MODE_MANUAL = "manual"
+    WITHDRAWAL_MODE_CHOICES = (
+        (WITHDRAWAL_MODE_AUTO, "Automatic"),
+        (WITHDRAWAL_MODE_MANUAL, "Manual Review"),
+    )
+
     code = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=100)
     network = models.CharField(max_length=50, blank=True)
     binance_symbol = models.CharField(max_length=30, blank=True)
     broker_wallet_address = models.CharField(max_length=255, blank=True)
     is_active = models.BooleanField(default=True)
+    deposit_enabled = models.BooleanField(default=True)
+    send_enabled = models.BooleanField(default=True)
+    withdrawal_mode = models.CharField(
+        max_length=10,
+        choices=WITHDRAWAL_MODE_CHOICES,
+        default=WITHDRAWAL_MODE_AUTO,
+    )
     sort_order = models.PositiveSmallIntegerField(default=100)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

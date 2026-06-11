@@ -443,3 +443,126 @@ def serialize_withdrawal(withdrawal):
         "completed_at": withdrawal.completed_at.isoformat() if withdrawal.completed_at else None,
         "reviewed_at": withdrawal.reviewed_at.isoformat() if withdrawal.reviewed_at else None,
     }
+
+
+# ---------------------------------------------------------------------------
+# Treasury sync + reconciliation
+# ---------------------------------------------------------------------------
+
+def _is_cron_authenticated(request) -> bool:
+    """Allow access if the request carries the server-side CRON_SECRET header."""
+    from django.conf import settings
+    secret = getattr(settings, "CRON_SECRET", "")
+    if not secret:
+        return False
+    return request.headers.get("X-Cron-Secret", "") == secret
+
+
+def sync_treasury(request):
+    """
+    Fetch Quidax master-wallet balances for all active assets and store a
+    TreasurySnapshot row for each.  Accepts either:
+      - A valid staff JWT (admin triggering it manually), or
+      - X-Cron-Secret header (GitHub Actions cron job).
+    """
+    import logging
+    from decimal import Decimal, InvalidOperation
+
+    from rates.models import Asset
+    from .models import TreasurySnapshot
+
+    logger = logging.getLogger(__name__)
+
+    # Allow cron header auth as an alternative to JWT staff auth
+    if not _is_cron_authenticated(request):
+        from broker.services import ensure_admin
+        ensure_admin(request.auth)
+
+    assets = Asset.objects.filter(is_active=True).exclude(code="NGN")
+
+    synced = []
+    errors = []
+
+    for asset in assets:
+        try:
+            from quidax.services import _quidax_request
+            response = _quidax_request(f"users/me/wallets/{asset.code.lower()}")
+            data = response.get("data") or response
+            raw_balance = data.get("balance", "0")
+            balance = Decimal(str(raw_balance))
+            TreasurySnapshot.objects.create(asset=asset, balance=balance, source="quidax")
+            synced.append({"asset": asset.code, "balance": str(balance)})
+        except (InvalidOperation, Exception) as exc:
+            logger.warning("Treasury sync failed for %s: %s", asset.code, exc)
+            errors.append({"asset": asset.code, "error": str(exc)})
+
+    return {
+        "synced": len(synced),
+        "errors": len(errors),
+        "results": synced,
+        "failures": errors,
+    }
+
+
+def get_reconciliation(request):
+    """
+    Returns per-asset reconciliation: user liability vs treasury snapshot vs
+    platform reserve.  Staff JWT required.
+    """
+    from decimal import Decimal
+    from django.db.models import Sum
+    from django.utils import timezone
+
+    from broker.services import ensure_admin
+    from rates.models import Asset
+    from .models import WalletBalance, PlatformReserve, TreasurySnapshot
+
+    ensure_admin(request.auth)
+
+    assets = Asset.objects.filter(is_active=True).exclude(code="NGN")
+    rows = []
+
+    for asset in assets:
+        # Sum of all user balances (our liability)
+        user_liability = (
+            WalletBalance.objects.filter(asset=asset)
+            .aggregate(total=Sum("balance"))["total"]
+            or Decimal("0")
+        )
+
+        # Latest treasury snapshot
+        latest_snapshot = (
+            TreasurySnapshot.objects.filter(asset=asset).order_by("-synced_at").first()
+        )
+        treasury_balance = latest_snapshot.balance if latest_snapshot else None
+        snapshot_age_seconds = (
+            int((timezone.now() - latest_snapshot.synced_at).total_seconds())
+            if latest_snapshot
+            else None
+        )
+
+        # Internal platform reserve (our own ledger tracking)
+        try:
+            reserve = PlatformReserve.objects.get(asset=asset)
+            platform_reserve = reserve.balance
+        except PlatformReserve.DoesNotExist:
+            platform_reserve = Decimal("0")
+
+        difference = (treasury_balance - user_liability) if treasury_balance is not None else None
+
+        rows.append({
+            "asset": asset.code,
+            "asset_name": asset.name,
+            "user_liability": str(user_liability),
+            "treasury_balance": str(treasury_balance) if treasury_balance is not None else None,
+            "platform_reserve": str(platform_reserve),
+            "difference": str(difference) if difference is not None else None,
+            "has_deficit": bool(difference is not None and difference < 0),
+            "snapshot_age_seconds": snapshot_age_seconds,
+            "withdrawal_mode": asset.withdrawal_mode,
+            "send_enabled": asset.send_enabled,
+            "deposit_enabled": asset.deposit_enabled,
+        })
+
+    return {"assets": rows, "count": len(rows)}
+

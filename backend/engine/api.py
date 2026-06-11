@@ -11,6 +11,7 @@ from quidax.router import router as quidax_router
 from rates.router import router as rates_router
 from notifications.router import router as notifications_router
 from wallets.router import router as wallets_router
+from transfers.router import router as transfers_router
 
 logger = logging.getLogger(__name__)
 
@@ -76,4 +77,5 @@ api.add_router("/payments", payments_router)
 api.add_router("/kyc", kyc_router)
 api.add_router("/quidax", quidax_router)
 api.add_router("/notifications", notifications_router)
+api.add_router("/transfers", transfers_router)
 api.add_router("/admin", admin_router)

@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "nowpayments",
     "quidax",
     "notifications",
+    "transfers",
 ]
 
 MIDDLEWARE = [
@@ -136,6 +137,9 @@ QUIDAX_API_BASE_URL = os.getenv("QUIDAX_API_BASE_URL", "https://openapi.quidax.i
 QUIDAX_API_KEY = os.getenv("QUIDAX_API_KEY", "")
 QUIDAX_SECRET_KEY = os.getenv("QUIDAX_SECRET_KEY", "")
 QUIDAX_WEBHOOK_SECRET = os.getenv("QUIDAX_WEBHOOK_SECRET", "")
+
+CRON_SECRET = os.getenv("CRON_SECRET", "")
+
 
 
 # Auth cookie settings for JWT in HttpOnly cookies

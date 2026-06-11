@@ -15,6 +15,8 @@ class Notification(models.Model):
     KYC_APPROVED = "kyc_approved"
     KYC_REJECTED = "kyc_rejected"
     REFERRAL_REWARD = "referral_reward"
+    CRYPTO_SENT = "crypto_sent"
+    CRYPTO_RECEIVED = "crypto_received"
     GENERAL = "general"
 
     TYPE_CHOICES = (
@@ -27,6 +29,8 @@ class Notification(models.Model):
         (KYC_APPROVED, "KYC Approved"),
         (KYC_REJECTED, "KYC Rejected"),
         (REFERRAL_REWARD, "Referral Reward"),
+        (CRYPTO_SENT, "Crypto Sent"),
+        (CRYPTO_RECEIVED, "Crypto Received"),
         (GENERAL, "General"),
     )
 

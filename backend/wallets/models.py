@@ -289,3 +289,32 @@ class WalletFunding(models.Model):
 
     def __str__(self):
         return f"Funding {self.reference} - {self.user.email} - {self.amount}"
+
+
+class TreasurySnapshot(models.Model):
+    """
+    A point-in-time record of the Quidax master wallet balance for an asset.
+    Compared against the sum of WalletBalance to detect surpluses/deficits.
+    """
+
+    asset = models.ForeignKey(
+        "rates.Asset",
+        on_delete=models.PROTECT,
+        related_name="treasury_snapshots",
+        to_field="code",
+        db_column="asset",
+    )
+    balance = models.DecimalField(max_digits=30, decimal_places=8, default=0)
+    source = models.CharField(max_length=30, default="quidax")
+    synced_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-synced_at"]
+        db_table = "broker_treasurysnapshot"
+        indexes = [
+            models.Index(fields=["asset", "-synced_at"]),
+        ]
+
+    def __str__(self):
+        return f"Treasury {self.asset_id} = {self.balance} @ {self.synced_at.isoformat()}"
+

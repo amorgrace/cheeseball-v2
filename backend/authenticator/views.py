@@ -579,3 +579,18 @@ async def get_referral_info(request):
             for email, joined in referrals
         ],
     }
+
+
+async def lookup_user(request, email: str):
+    """Lookup a user by email to confirm recipient details before a transfer."""
+    email = normalize_email(email)
+    user = await User.objects.filter(email=email).afirst()
+    if not user:
+        return Response({"detail": "User not found."}, status=404)
+        
+    return {
+        "id": user.id,
+        "email": user.email,
+        "fullname": user.fullname,
+    }
+

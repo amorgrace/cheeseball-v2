@@ -118,3 +118,35 @@ from .views import fund_ngn_wallet
 @router.post("/fund/ngn", response=WalletFundingResponseSchema, auth=JWTAuth())
 def fund_ngn(request, payload: WalletFundingCreateSchema):
     return fund_ngn_wallet(request, payload)
+
+
+# --- Treasury (admin + cron) ---
+from ninja.security import HttpBearer
+from .views import sync_treasury, get_reconciliation
+
+
+class CronOrJWTAuth(HttpBearer):
+    """Allows either a valid JWT (staff) or the X-Cron-Secret header."""
+    def authenticate(self, request, token):
+        # HttpBearer extracts Bearer token; we also check the cron header
+        from .views import _is_cron_authenticated
+        if _is_cron_authenticated(request):
+            return "cron"
+        # Fall back to JWT
+        from authenticator.auth import JWTAuth as _JWTAuth
+        import asyncio
+        loop = asyncio.new_event_loop()
+        user = loop.run_until_complete(_JWTAuth()(request))
+        loop.close()
+        return user
+
+
+@router.post("/admin/treasury/sync", auth=None)
+def treasury_sync(request):
+    return sync_treasury(request)
+
+
+@router.get("/admin/treasury/reconciliation", auth=JWTAuth())
+def treasury_reconciliation(request):
+    return get_reconciliation(request)
+

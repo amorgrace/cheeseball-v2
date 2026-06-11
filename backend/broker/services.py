@@ -11,7 +11,9 @@ from payouts.models import BeneficiaryBankAccount
 
 from .models import Transaction
 
-AUTOMATED_BUY_ASSET_CODES = {"BTC", "ETH", "USDT"}
+# All assets support automated payment methods (Paystack / NGN wallet)
+# for the buy flow because it is purely in-app ledger crediting — no
+# on-chain send is required from us at buy time.
 AUTOMATED_BUY_PAYMENT_METHODS = {Transaction.PAYSTACK, Transaction.NGN_WALLET}
 MANUAL_BUY_PAYMENT_METHODS = {Transaction.BANK_TRANSFER}
 
@@ -52,15 +54,17 @@ def get_broker_wallet_address(asset: Asset) -> str:
 
 
 def validate_buy_payment_method(asset: Asset, payment_method: str) -> None:
-    if asset.code in AUTOMATED_BUY_ASSET_CODES:
-        if payment_method not in AUTOMATED_BUY_PAYMENT_METHODS:
-            raise ValidationError(
-                f"{asset.code} purchases support Paystack bank transfer or NGN wallet only."
-            )
-        return
+    """All assets accept Paystack or NGN-wallet for buy orders.
 
-    if payment_method not in MANUAL_BUY_PAYMENT_METHODS:
-        raise ValidationError(f"{asset.code} purchases require manual bank transfer.")
+    Buying crypto is purely an internal ledger credit — we receive the NGN
+    payment, confirm it, then credit the user's in-app wallet.  There is no
+    on-chain transaction required from us at buy time, so there is no reason
+    to restrict any asset to manual bank-transfer only.
+    """
+    if payment_method not in AUTOMATED_BUY_PAYMENT_METHODS | MANUAL_BUY_PAYMENT_METHODS:
+        raise ValidationError(
+            f"Invalid payment method '{payment_method}' for buying {asset.code}."
+        )
 
 
 def transition_transaction(transaction: Transaction, status: str, *, admin_user=None, note: str = "", reason: str = "") -> Transaction:

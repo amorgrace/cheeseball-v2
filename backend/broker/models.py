@@ -7,8 +7,8 @@ from django.db import models
 
 
 def generate_transaction_id():
-    # 3 chars "tx-" + 11 chars random combo = 14 units max
-    return "tx-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=11))
+    # 3 chars "tx-" + 13 chars random combo = 16 units max
+    return "tx-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=13))
 
 class Transaction(models.Model):
     BUY = "buy"
@@ -54,7 +54,7 @@ class Transaction(models.Model):
         (PAYOUT_NGN_WALLET, "NGN wallet"),
     )
 
-    id = models.CharField(max_length=14, primary_key=True, default=generate_transaction_id, editable=False)
+    id = models.CharField(max_length=20, primary_key=True, default=generate_transaction_id, editable=False)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="transactions")
     quote = models.ForeignKey("rates.RateQuote", on_delete=models.SET_NULL, null=True, blank=True, related_name="transactions")
     custody_deposit = models.ForeignKey(

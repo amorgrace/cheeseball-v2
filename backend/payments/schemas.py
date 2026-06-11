@@ -1,12 +1,11 @@
 from datetime import datetime
-from uuid import UUID
 
 from ninja import Schema
 from pydantic import model_validator
 
 
 class PaymentSetupSchema(Schema):
-    transaction_id: UUID
+    transaction_id: str
     payment_method: str
 
     @model_validator(mode="after")

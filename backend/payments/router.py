@@ -1,4 +1,3 @@
-from uuid import UUID
 
 from ninja import Header, Router
 
@@ -33,12 +32,12 @@ def create_payment_setup(request, payload: PaymentSetupSchema):
 
 
 @router.post("/transactions/{transaction_id}/bank-transfer/submit", response=PaymentRecordSchema, auth=JWTAuth())
-def submit_transfer(request, transaction_id: UUID, payload: BankTransferSubmissionSchema):
+def submit_transfer(request, transaction_id: str, payload: BankTransferSubmissionSchema):
     return submit_bank_transfer(request, transaction_id, payload)
 
 
 @router.post("/admin/transactions/{transaction_id}/bank-transfer/verify", response=PaymentRecordSchema, auth=JWTAuth())
-def admin_verify_transfer(request, transaction_id: UUID):
+def admin_verify_transfer(request, transaction_id: str):
     return verify_bank_transfer(request, transaction_id)
 
 

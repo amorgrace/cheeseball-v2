@@ -1,4 +1,3 @@
-from uuid import UUID
 
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
@@ -27,14 +26,14 @@ def list_transactions(request):
     return list(queryset)
 
 
-def get_transaction(request, transaction_id: UUID):
+def get_transaction(request, transaction_id: str):
     transaction = get_object_or_404(Transaction, id=transaction_id)
     if not user_can_access(transaction, request.auth):
         return Response({"detail": "Transaction not found"}, status=404)
     return transaction
 
 
-def confirm_sell_crypto_sent(request, transaction_id: UUID):
+def confirm_sell_crypto_sent(request, transaction_id: str):
     transaction = get_object_or_404(Transaction, id=transaction_id, transaction_type=Transaction.SELL)
     if transaction.user_id != request.auth.id:
         return Response({"detail": "Transaction not found"}, status=404)
@@ -43,7 +42,7 @@ def confirm_sell_crypto_sent(request, transaction_id: UUID):
     return transition_transaction(transaction, Transaction.PENDING_REVIEW)
 
 
-def approve_transaction(request, transaction_id: UUID, payload):
+def approve_transaction(request, transaction_id: str, payload):
     ensure_admin(request.auth)
     transaction = get_object_or_404(Transaction, id=transaction_id)
     try:
@@ -52,7 +51,7 @@ def approve_transaction(request, transaction_id: UUID, payload):
         return Response({"detail": str(e)}, status=400)
 
 
-def reject_transaction(request, transaction_id: UUID, payload):
+def reject_transaction(request, transaction_id: str, payload):
     ensure_admin(request.auth)
     transaction = get_object_or_404(Transaction, id=transaction_id)
     try:
@@ -61,7 +60,7 @@ def reject_transaction(request, transaction_id: UUID, payload):
         return Response({"detail": str(e)}, status=400)
 
 
-def complete_transaction(request, transaction_id: UUID, payload):
+def complete_transaction(request, transaction_id: str, payload):
     ensure_admin(request.auth)
     transaction = get_object_or_404(Transaction, id=transaction_id)
     try:
@@ -70,7 +69,7 @@ def complete_transaction(request, transaction_id: UUID, payload):
         return Response({"detail": str(e)}, status=400)
 
 
-def fail_transaction(request, transaction_id: UUID, payload):
+def fail_transaction(request, transaction_id: str, payload):
     ensure_admin(request.auth)
     transaction = get_object_or_404(Transaction, id=transaction_id)
     try:

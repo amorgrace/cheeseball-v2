@@ -1,4 +1,3 @@
-from uuid import UUID
 
 from ninja import Router
 
@@ -37,32 +36,32 @@ def transactions(request):
 
 
 @router.get("/transactions/{transaction_id}", response=TransactionSchema, auth=JWTAuth())
-def transaction_detail(request, transaction_id: UUID):
+def transaction_detail(request, transaction_id: str):
     return get_transaction(request, transaction_id)
 
 
 @router.post("/transactions/{transaction_id}/confirm-crypto-sent", response=TransactionSchema, auth=JWTAuth())
-def confirm_crypto_sent(request, transaction_id: UUID):
+def confirm_crypto_sent(request, transaction_id: str):
     return confirm_sell_crypto_sent(request, transaction_id)
 
 
 @router.post("/admin/transactions/{transaction_id}/approve", response=TransactionSchema, auth=JWTAuth())
-def admin_approve(request, transaction_id: UUID, payload: TransactionActionSchema):
+def admin_approve(request, transaction_id: str, payload: TransactionActionSchema):
     return approve_transaction(request, transaction_id, payload)
 
 
 @router.post("/admin/transactions/{transaction_id}/reject", response=TransactionSchema, auth=JWTAuth())
-def admin_reject(request, transaction_id: UUID, payload: RejectTransactionSchema):
+def admin_reject(request, transaction_id: str, payload: RejectTransactionSchema):
     return reject_transaction(request, transaction_id, payload)
 
 
 @router.post("/admin/transactions/{transaction_id}/complete", response=TransactionSchema, auth=JWTAuth())
-def admin_complete(request, transaction_id: UUID, payload: TransactionActionSchema):
+def admin_complete(request, transaction_id: str, payload: TransactionActionSchema):
     return complete_transaction(request, transaction_id, payload)
 
 
 @router.post("/admin/transactions/{transaction_id}/fail", response=TransactionSchema, auth=JWTAuth())
-def admin_fail(request, transaction_id: UUID, payload: TransactionActionSchema):
+def admin_fail(request, transaction_id: str, payload: TransactionActionSchema):
     return fail_transaction(request, transaction_id, payload)
 
 

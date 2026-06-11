@@ -1,6 +1,5 @@
 from datetime import datetime
 from decimal import Decimal
-from uuid import UUID
 
 from ninja import Schema
 from pydantic import model_validator
@@ -45,7 +44,7 @@ class RejectTransactionSchema(Schema):
 
 
 class TransactionSchema(Schema):
-    id: UUID
+    id: str
     transaction_type: str
     asset_code: str
     asset_name: str

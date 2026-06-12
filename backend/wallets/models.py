@@ -243,13 +243,20 @@ class ReserveMovement(models.Model):
         return f"{self.movement_type.upper()} {self.amount} {self.asset.code} @ {self.created_at.isoformat()}"
 
 
+import random
+import string
+
+def generate_deposit_id():
+    # prefix "dp-" + 13 chars = 16 max
+    return "dp-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=13))
+
 class DepositTransaction(models.Model):
     PENDING = "pending"
     COMPLETED = "completed"
     FAILED = "failed"
     STATUS_CHOICES = ((PENDING, "Pending"), (COMPLETED, "Completed"), (FAILED, "Failed"))
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.CharField(primary_key=True, max_length=20, default=generate_deposit_id, editable=False)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="deposits")
     platform_account = models.ForeignKey(PlatformAccount, on_delete=models.PROTECT, related_name="deposits")
     expected_amount = models.DecimalField(max_digits=30, decimal_places=8)

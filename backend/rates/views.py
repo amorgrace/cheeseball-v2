@@ -8,7 +8,7 @@ def list_assets():
 
 
 def create_buy_quote(payload: BuyQuoteInputSchema):
-    return build_quote(asset=payload.asset, quote_type="buy", naira_amount=payload.naira_amount)
+    return build_quote(asset=payload.asset, quote_type="buy", crypto_amount=payload.crypto_amount, naira_amount=payload.naira_amount)
 
 
 def create_sell_quote(payload: SellQuoteInputSchema):

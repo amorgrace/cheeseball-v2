@@ -50,9 +50,12 @@ def create_deposit(request, payload: DepositCreateSchema):
 
     asset = get_object_or_404(Asset, code=payload.asset)
 
-    # Get the network for this asset from PlatformAccount (used for memo detection)
-    platform_account = PlatformAccount.objects.filter(asset=asset).first()
-    network = (platform_account.network if platform_account else "") or ""
+    # Get or create the PlatformAccount for this asset (used for memo detection)
+    platform_account, _ = PlatformAccount.objects.get_or_create(
+        asset=asset,
+        defaults={"network": asset.network}
+    )
+    network = platform_account.network or asset.network or ""
 
     # Generate (or retrieve cached) Quidax wallet address for this user
     import logging

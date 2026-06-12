@@ -106,8 +106,8 @@ class UserLookupResponse(Schema):
 
 
 @router.get("/users/lookup", response=UserLookupResponse, auth=JWTAuth())
-async def user_lookup(request, query: str):
+async def user_lookup(request, email: str):
     from .views import lookup_user
-    return await lookup_user(request, query)
+    return await lookup_user(request, query=email)
 
 

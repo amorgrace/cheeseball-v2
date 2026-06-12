@@ -247,8 +247,8 @@ import random
 import string
 
 def generate_deposit_id():
-    # prefix "dp-" + 13 chars = 16 max
-    return "dp-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=13))
+    # prefix "tx-" + 13 chars = 16 max
+    return "tx-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=13))
 
 class DepositTransaction(models.Model):
     PENDING = "pending"

@@ -1,6 +1,7 @@
 import logging
 import hashlib
 import secrets
+import uuid
 from datetime import datetime, timedelta, timezone as dt_timezone
 
 from anymail.exceptions import AnymailError
@@ -581,10 +582,14 @@ async def get_referral_info(request):
     }
 
 
-async def lookup_user(request, email: str):
-    """Lookup a user by email to confirm recipient details before a transfer."""
-    email = normalize_email(email)
-    user = await User.objects.filter(email=email).afirst()
+async def lookup_user(request, query: str):
+    """Lookup a user by UUID or email to confirm recipient details before a transfer."""
+    try:
+        user_uuid = uuid.UUID(query.strip())
+        user = await User.objects.filter(id=user_uuid).afirst()
+    except ValueError:
+        user = await User.objects.filter(email=normalize_email(query)).afirst()
+
     if not user:
         return Response({"detail": "User not found."}, status=404)
         

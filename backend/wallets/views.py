@@ -46,10 +46,46 @@ def _generate_reference_code(length: int = 10) -> str:
 
 
 def create_deposit(request, payload: DepositCreateSchema):
+    from quidax.services import ensure_wallet_address
+
     asset = get_object_or_404(Asset, code=payload.asset)
-    platform_account = get_object_or_404(PlatformAccount, asset=asset)
 
+    # Get the network for this asset from PlatformAccount (used for memo detection)
+    platform_account = PlatformAccount.objects.filter(asset=asset).first()
+    network = (platform_account.network if platform_account else "") or ""
 
+    # Generate (or retrieve cached) Quidax wallet address for this user
+    import logging
+    logger = logging.getLogger(__name__)
+
+    try:
+        quidax_wallet = ensure_wallet_address(
+            request.auth,
+            currency=asset.code,
+            network=network,
+        )
+    except Exception as exc:
+        logger.exception("Failed to create Quidax deposit wallet for deposit — will use PENDING status")
+        from quidax.services import ensure_sub_account
+        from quidax.models import QuidaxWalletAddress
+        try:
+            sub_account = ensure_sub_account(request.auth)
+            quidax_wallet, _ = QuidaxWalletAddress.objects.get_or_create(
+                user=request.auth,
+                currency=asset.code.upper(),
+                network=network,
+                defaults={
+                    "sub_account": sub_account,
+                    "address": "",
+                    "status": QuidaxWalletAddress.PENDING,
+                    "provider_payload": {"error": str(exc)},
+                },
+            )
+        except Exception:
+            logger.exception("Failed to create PENDING Quidax wallet address record")
+            return Response({"detail": "Failed to initiate address generation"}, status=500)
+
+    # Generate unique reference code
     for _ in range(5):
         ref = _generate_reference_code()
         if not DepositTransaction.objects.filter(reference_code=ref).exists():
@@ -65,22 +101,19 @@ def create_deposit(request, payload: DepositCreateSchema):
     )
 
     memo_supported_networks = {"SOL", "XRP", "TRON", "TRX", "USDT"}
-    memo_supported = (platform_account.network or "").upper() in memo_supported_networks
-
-
-    if not platform_account.platform_address:
-        return Response({"detail": "This asset is temporarily unavailable for deposits."}, status=400)
+    memo_supported = network.upper() in memo_supported_networks
 
     return {
         "id": deposit.id,
         "asset": asset.code,
         "expected_amount": deposit.expected_amount,
-        "platform_address": platform_account.platform_address,
-        "reference_code": deposit.reference_code,
-        "network": platform_account.network,
-        "memo_supported": memo_supported,
+        "platform_address": quidax_wallet.address,
+        "reference_code": quidax_wallet.destination_tag or deposit.reference_code,
+        "network": network or quidax_wallet.network,
+        "memo_supported": memo_supported or bool(quidax_wallet.destination_tag),
         "created_at": deposit.created_at.isoformat(),
     }
+
 
 
 def get_deposit(request, deposit_id: UUID):

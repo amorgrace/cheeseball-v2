@@ -594,7 +594,7 @@ async def lookup_user(request, query: str):
         return Response({"detail": "User not found."}, status=404)
         
     return {
-        "id": user.id,
+        "id": str(user.id),
         "email": user.email,
         "fullname": user.fullname,
     }

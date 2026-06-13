@@ -159,6 +159,15 @@ class UserMeSchema(Schema):
     fullname: str
     is_staff: bool
     verified_at: datetime | None = None
+    kyc_status: str
+    kyc_rejection_reason: str | None = None
+
+    @staticmethod
+    def resolve_kyc_rejection_reason(obj):
+        if obj.kyc_status == "rejected":
+            latest = obj.kyc_submissions.first()
+            return latest.admin_note if latest else None
+        return None
 
 
 class UpdateMeSchema(Schema):

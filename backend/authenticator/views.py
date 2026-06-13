@@ -19,7 +19,6 @@ from .schemas import (
     LoginSchema,
     PasswordResetConfirmSchema,
     PasswordResetRequestSchema,
-    RefreshTokenInput,
     RegisterSchema,
     ResendTokenSchema,
     UpdateMeSchema,

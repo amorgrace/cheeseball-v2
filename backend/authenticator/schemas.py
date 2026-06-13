@@ -162,13 +162,6 @@ class UserMeSchema(Schema):
     kyc_status: str
     kyc_rejection_reason: str | None = None
 
-    @staticmethod
-    def resolve_kyc_rejection_reason(obj):
-        if obj.kyc_status == "rejected":
-            latest = obj.kyc_submissions.first()
-            return latest.admin_note if latest else None
-        return None
-
 
 class UpdateMeSchema(Schema):
     fullname: str | None = None

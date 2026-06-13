@@ -536,14 +536,25 @@ async def confirm_password_reset(payload: PasswordResetConfirmSchema):
 
 async def get_current_user(request):
     user = request.auth
+
+    kyc_rejection_reason = None
+    if user.kyc_status == "rejected":
+        from kyc.models import KYCSubmission
+        latest = await sync_to_async(
+            lambda: KYCSubmission.objects.filter(user=user).first()
+        )()
+        kyc_rejection_reason = latest.admin_note if latest else None
+
     return {
-        "id": user.id,
+        "id": str(user.id),
         "email": user.email,
         "phone_number": user.phone_number,
         "referral_code": user.referral_code,
         "fullname": user.fullname,
         "is_staff": user.is_staff,
         "verified_at": format_dt(user.verified_at),
+        "kyc_status": user.kyc_status,
+        "kyc_rejection_reason": kyc_rejection_reason,
     }
 
 

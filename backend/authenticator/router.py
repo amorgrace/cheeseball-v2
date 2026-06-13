@@ -8,7 +8,6 @@ from .schemas import (
     PasswordResetConfirmSchema,
     PasswordResetRequestSchema,
     ReferralInfoSchema,
-    RefreshTokenInput,
     RegisterSchema,
     ResendTokenSchema,
     TokenSchema,
@@ -24,7 +23,6 @@ from .views import (
     get_referral_info,
     login_user,
     logout_user,
-    refresh_user_token,
     register_user,
     request_password_reset,
     resend_user_token,
@@ -46,14 +44,9 @@ async def login(request, payload: LoginSchema):
     return await login_user(request, payload)
 
 
-@router.post("/token/refresh", response=TokenSchema)
-async def token_refresh(request, payload: RefreshTokenInput | None = None):
-    return await refresh_user_token(request, payload)
-
-
 @router.post("/logout", response=MessageSchema)
-async def logout(request, payload: RefreshTokenInput | None = None):
-    return await logout_user(request, payload)
+async def logout(request):
+    return await logout_user(request)
 
 
 @router.post("/verify-token", response=TokenSchema)

@@ -52,7 +52,6 @@ class LoginSchema(Schema):
 
 class TokenSchema(Schema):
     access: str | None = None
-    refresh: str | None = None
     message: str | None = None
 
 
@@ -66,8 +65,6 @@ class PasswordResetChallengeSchema(Schema):
     resend_available_at: datetime
 
 
-class RefreshTokenInput(Schema):
-    refresh_token: str | None = None
 
 
 class MessageSchema(Schema):

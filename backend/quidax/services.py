@@ -114,7 +114,18 @@ def ensure_sub_account(user) -> QuidaxSubAccount:
     if existing:
         return existing
 
-    response = _quidax_request("users", data=_sub_account_payload(user), method="POST")
+    payload = _sub_account_payload(user)
+    response = _quidax_request("users", data=payload, method="POST")
+
+    if response.get("ok") is False and "already exists" in str(response.get("error", "")).lower():
+        import secrets
+        parts = user.email.split("@")
+        if len(parts) == 2:
+            payload["email"] = f"{parts[0]}+{secrets.token_hex(4)}@{parts[1]}"
+        else:
+            payload["email"] = f"{user.email}+{secrets.token_hex(4)}@cheeseball.internal"
+        response = _quidax_request("users", data=payload, method="POST")
+
     _check_quidax_response(response, "sub-account creation")
 
     data = _provider_data(response)
@@ -126,7 +137,7 @@ def ensure_sub_account(user) -> QuidaxSubAccount:
         user=user,
         defaults={
             "quidax_id": str(quidax_id),
-            "email": data.get("email") or user.email,
+            "email": data.get("email") or payload["email"],
             "provider_payload": response,
         },
     )

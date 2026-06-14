@@ -1,14 +1,13 @@
 from datetime import datetime, timezone as dt_timezone
 
-from asgiref.sync import sync_to_async
 from django.contrib.auth import get_user_model
-from ninja_jwt.authentication import AsyncJWTAuth as BaseJWTAuth
+from ninja_jwt.authentication import JWTAuth as BaseJWTAuth
 from ninja_jwt.exceptions import AuthenticationFailed
 from ninja_jwt.tokens import UntypedToken
 
 
 class JWTAuth(BaseJWTAuth):
-    async def __call__(self, request):
+    def __call__(self, request):
         # Prefer Authorization header, but allow HttpOnly access-token cookie.
         token = None
         auth_header = request.headers.get("Authorization")
@@ -19,13 +18,17 @@ class JWTAuth(BaseJWTAuth):
         if not token:
             return None
 
-        untyped_token = await sync_to_async(UntypedToken)(token)
+        untyped_token = UntypedToken(token)
         user_id = untyped_token.payload.get("user_id")
         if not user_id:
             raise AuthenticationFailed("Invalid token payload")
 
         User = get_user_model()
-        user = await sync_to_async(User.objects.get)(id=user_id)
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            raise AuthenticationFailed("User not found")
+        
         if not user.is_active:
             raise AuthenticationFailed("User is inactive")
 
@@ -38,10 +41,10 @@ class JWTAuth(BaseJWTAuth):
 
         return user
 
-    async def authenticate(self, request, token):
+    def authenticate(self, request, token):
         # Retain compatibility for any direct authenticate() calls.
-        user = await super().authenticate(request, token)
-        untyped_token = await sync_to_async(UntypedToken)(token)
+        user = super().authenticate(request, token)
+        untyped_token = UntypedToken(token)
         if user.last_password_reset_at:
             issued_at = untyped_token.payload.get("iat")
             if issued_at:

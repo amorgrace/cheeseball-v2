@@ -98,7 +98,7 @@ def deposit_create(request, payload: DepositCreateSchema):
 
 
 @router.get("/deposits/{deposit_id}", response=DepositDetailSchema, auth=JWTAuth())
-def deposit_detail(request, deposit_id: UUID):
+def deposit_detail(request, deposit_id: str):
     return get_deposit(request, deposit_id)
 
 
@@ -108,7 +108,7 @@ def admin_deposits_list(request, status: str | None = None):
 
 
 @router.post("/admin/deposits/{deposit_id}/complete", response=DepositDetailSchema, auth=JWTAuth())
-def admin_deposit_complete(request, deposit_id: UUID, payload: AdminDepositCompleteSchema):
+def admin_deposit_complete(request, deposit_id: str, payload: AdminDepositCompleteSchema):
     return admin_complete_deposit(request, deposit_id, payload)
 
 

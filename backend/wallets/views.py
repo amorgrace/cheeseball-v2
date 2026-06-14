@@ -119,7 +119,7 @@ def create_deposit(request, payload: DepositCreateSchema):
 
 
 
-def get_deposit(request, deposit_id: UUID):
+def get_deposit(request, deposit_id: str):
     deposit = get_object_or_404(DepositTransaction, id=deposit_id)
     if not request.auth.is_staff and deposit.user_id != request.auth.id:
         return Response({"detail": "Deposit not found"}, status=404)
@@ -165,7 +165,7 @@ def admin_list_deposits(request, status: str | None = None):
     return results
 
 
-def admin_complete_deposit(request, deposit_id: UUID, payload: AdminDepositCompleteSchema):
+def admin_complete_deposit(request, deposit_id: str, payload: AdminDepositCompleteSchema):
     from broker.services import ensure_admin
 
     ensure_admin(request.auth)

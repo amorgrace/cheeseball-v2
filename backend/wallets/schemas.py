@@ -117,7 +117,7 @@ class DepositCreateSchema(Schema):
 
 
 class DepositResponseSchema(Schema):
-    id: UUID
+    id: str
     asset: str
     expected_amount: Decimal
     platform_address: str
@@ -128,7 +128,7 @@ class DepositResponseSchema(Schema):
 
 
 class DepositDetailSchema(Schema):
-    id: UUID
+    id: str
     asset: str
     expected_amount: Decimal
     actual_amount: Decimal | None = None

@@ -15,7 +15,7 @@ from .views import diagnostics, sub_account, webhook, webhook_test, wallet_addre
 router = Router(tags=["Quidax"])
 
 
-@router.post("/webhook/", response=QuidaxWebhookResponseSchema)
+@router.post("/webhook", response=QuidaxWebhookResponseSchema)
 def quidax_webhook(
     request,
     payload: dict = Body(...),

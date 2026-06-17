@@ -13,6 +13,11 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     raise ImproperlyConfigured("SECRET_KEY is not set in the environment.")
+if len(SECRET_KEY.encode()) < 32:
+    raise ImproperlyConfigured(
+        "SECRET_KEY is too short for JWT signing (must be at least 32 bytes). "
+        "Generate a new one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+    )
 
 DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 
@@ -110,6 +115,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 NINJA_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    # Explicitly pass SECRET_KEY so PyJWT never falls back to a short/wrong key.
+    "SIGNING_KEY": SECRET_KEY,
 }
 
 USD_NGN_EXCHANGE_RATE = os.getenv("USD_NGN_EXCHANGE_RATE", "1600")

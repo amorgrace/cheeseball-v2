@@ -13,7 +13,7 @@ from django.db import transaction
 from django.template.loader import render_to_string
 from django.utils import timezone
 from ninja.responses import Response
-from ninja_jwt.tokens import AccessToken, BlacklistMixin
+from ninja_jwt.tokens import AccessToken, BlacklistMixin, RefreshToken
 
 from .schemas import (
     LoginSchema,
@@ -120,11 +120,11 @@ def _cookie_max_age_refresh() -> int:
     return int(getattr(settings, "AUTH_REFRESH_COOKIE_MAX_AGE", 604800))
 
 
-def auth_success_response(*, message: str, access_token: str):
-    response = Response({
-        "message": message,
-        "access": access_token,
-    })
+def auth_success_response(*, message: str, access_token: str, refresh_token: str | None = None):
+    body: dict = {"message": message, "access": access_token}
+    if refresh_token is not None:
+        body["refresh"] = refresh_token
+    response = Response(body)
     response.set_cookie(
         "access_token",
         access_token,
@@ -270,10 +270,11 @@ async def login_user(request, payload: LoginSchema):
     if not user:
         return Response({"detail": "Invalid credentials"}, status=401)
 
-    access = await sync_to_async(AccessToken.for_user)(user)
+    refresh = await sync_to_async(RefreshToken.for_user)(user)
     return auth_success_response(
         message="Login successful",
-        access_token=str(access),
+        access_token=str(refresh.access_token),
+        refresh_token=str(refresh),
     )
 
 

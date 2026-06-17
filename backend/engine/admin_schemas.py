@@ -75,7 +75,7 @@ class AdminUserUpdateSchema(Schema):
 # ─── Transactions ─────────────────────────────────────────────────────────────
 
 class AdminTransactionItem(Schema):
-    id: UUID
+    id: str
     user_email: str
     transaction_type: str
     asset: str
@@ -93,7 +93,7 @@ class AdminTransactionListResponse(Schema):
 
 
 class AdminTransactionDetailSchema(Schema):
-    id: UUID
+    id: str
     user_email: str
     user_id: UUID
     transaction_type: str

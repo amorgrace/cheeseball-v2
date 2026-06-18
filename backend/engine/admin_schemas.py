@@ -72,6 +72,10 @@ class AdminUserUpdateSchema(Schema):
     kyc_status: Optional[str] = None
 
 
+class AdminDelegateSchema(Schema):
+    email: str
+
+
 # ─── Transactions ─────────────────────────────────────────────────────────────
 
 class AdminTransactionItem(Schema):

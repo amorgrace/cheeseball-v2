@@ -9,6 +9,7 @@ from asgiref.sync import sync_to_async
 
 from engine.admin_auth import AdminJWTAuth
 from engine.admin_schemas import (
+    AdminDelegateSchema,
     AdminKYCItem,
     AdminKYCListResponse,
     AdminKYCReviewSchema,
@@ -138,6 +139,84 @@ async def list_users(
             for u in items
         ]
         return AdminUserListResponse(users=users, meta=meta)
+    return await _inner()
+
+
+@router.post("/users/delegate-admin", response=MessageSchema)
+async def delegate_admin(request, payload: AdminDelegateSchema):
+    @sync_to_async
+    def _inner():
+        from authenticator.models import CustomUser
+
+        email = payload.email.strip().lower()
+        if not email:
+            return 400, MessageSchema(detail="Email is required.")
+
+        user = CustomUser.objects.get(email=email)
+        if user.is_staff:
+            return MessageSchema(detail=f"{user.email} is already an admin.")
+
+        user.is_staff = True
+        user.save(update_fields=["is_staff"])
+        logger.info(f"Admin {request.auth.email} delegated admin access to {user.email}")
+        return MessageSchema(detail=f"{user.email} is now an admin.")
+
+    return await _inner()
+
+
+@router.get("/admins", response=AdminUserListResponse)
+async def list_admins(
+    request,
+    page: int = Query(1),
+    page_size: int = Query(25),
+    search: str = Query(None),
+):
+    @sync_to_async
+    def _inner():
+        from authenticator.models import CustomUser
+
+        qs = CustomUser.objects.filter(is_staff=True).order_by("-date_joined")
+        if search:
+            qs = qs.filter(Q(email__icontains=search) | Q(first_name__icontains=search) | Q(last_name__icontains=search))
+
+        items, meta = paginate_qs(qs, page, page_size)
+        admins = [
+            AdminUserListItem(
+                id=u.id, email=u.email, first_name=u.first_name, last_name=u.last_name,
+                phone_number=u.phone_number, referral_code=u.referral_code,
+                kyc_status=u.kyc_status, is_active=u.is_active, is_staff=u.is_staff,
+                date_joined=u.date_joined, last_login=u.last_login,
+            )
+            for u in items
+        ]
+        return AdminUserListResponse(users=admins, meta=meta)
+
+    return await _inner()
+
+
+@router.post("/admins/revoke", response=MessageSchema)
+async def revoke_admin(request, payload: AdminDelegateSchema):
+    @sync_to_async
+    def _inner():
+        from authenticator.models import CustomUser
+
+        email = payload.email.strip().lower()
+        if not email:
+            return 400, MessageSchema(detail="Email is required.")
+
+        user = CustomUser.objects.get(email=email)
+        if user.id == request.auth.id:
+            return 400, MessageSchema(detail="You cannot remove your own admin access.")
+        if user.is_superuser:
+            return 400, MessageSchema(detail="Superuser admin access cannot be removed here.")
+        if not user.is_staff:
+            return MessageSchema(detail=f"{user.email} is not an admin.")
+
+        user.is_staff = False
+        user.save(update_fields=["is_staff"])
+        logger.info(f"Admin {request.auth.email} removed admin access from {user.email}")
+        return MessageSchema(detail=f"{user.email} is no longer an admin.")
+
     return await _inner()
 
 

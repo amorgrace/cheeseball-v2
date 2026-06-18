@@ -1,0 +1,401 @@
+diff --git a/src/components/Sidebar.tsx b/src/components/Sidebar.tsx
+--- a/src/components/Sidebar.tsx
++++ b/src/components/Sidebar.tsx
+@@ -17,7 +17,8 @@ import {
+   ChevronRight,
+   TrendingUp,
+-  Send
++  Send,
++  ShieldCheck
+ } from "lucide-react";
+@@ -33,6 +34,7 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
+     { name: "Dashboard", href: "/", icon: LayoutDashboard },
+     { name: "Users", href: "/users", icon: Users },
++    { name: "Admin Delegation", href: "/admin-delegation", icon: ShieldCheck },
+     { name: "Transactions", href: "/transactions", icon: ArrowUpDown },
+     { name: "KYC Review", href: "/kyc", icon: FileCheck },
+diff --git a/src/app/users/page.tsx b/src/app/users/page.tsx
+--- a/src/app/users/page.tsx
++++ b/src/app/users/page.tsx
+@@ -5,7 +5,7 @@ import { api } from "../../lib/api";
+ import DataTable, { Column } from "../../components/DataTable";
+ import StatusBadge from "../../components/StatusBadge";
+ import Link from "next/link";
+-import { RefreshCw, Search, UserCheck } from "lucide-react";
++import { RefreshCw, Search } from "lucide-react";
+@@ -30,10 +30,6 @@ interface UserListResponse {
+   };
+ }
+ 
+-interface MessageResponse {
+-  detail: string;
+-}
+-
+ export default function UsersPage() {
+@@ -45,10 +41,6 @@ export default function UsersPage() {
+   const [search, setSearch] = useState("");
+   const [kycStatus, setKycStatus] = useState("");
+   const [isActive, setIsActive] = useState("");
+-  const [delegateEmail, setDelegateEmail] = useState("");
+-  const [delegating, setDelegating] = useState(false);
+-  const [delegateMessage, setDelegateMessage] = useState<string | null>(null);
+-  const [delegateError, setDelegateError] = useState<string | null>(null);
+@@ -90,29 +82,6 @@ export default function UsersPage() {
+     setPage(1);
+   };
+ 
+-  const handleDelegateSubmit = async (e: React.FormEvent) => {
+-    e.preventDefault();
+-    setDelegateMessage(null);
+-    setDelegateError(null);
+-    const email = delegateEmail.trim();
+-    if (!email) {
+-      setDelegateError("Enter the user's email address.");
+-      return;
+-    }
+-
+-    setDelegating(true);
+-    try {
+-      const res = await api.post<MessageResponse>("/admin/users/delegate-admin", { email });
+-      setDelegateMessage(res.detail || "User is now an admin.");
+-      setDelegateEmail("");
+-      await fetchUsers();
+-    } catch (err: unknown) {
+-      const message = err instanceof Error ? err.message : "Failed to delegate admin access.";
+-      setDelegateError(message);
+-    } finally {
+-      setDelegating(false);
+-    }
+-  };
+-
+   const columns: Column<UserListItem>[] = [
+@@ -196,72 +165,6 @@ export default function UsersPage() {
+         </div>
+       )}
+ 
+-      <div className="card">
+-        <form onSubmit={handleDelegateSubmit} style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-4)", alignItems: "flex-end" }}>
+-          <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "center", minWidth: "220px" }}>
+-            <div
+-              style={{
+-                width: "40px",
+-                height: "40px",
+-                borderRadius: "var(--radius-md)",
+-                background: "var(--green-light)",
+-                color: "var(--green-text)",
+-                display: "flex",
+-                alignItems: "center",
+-                justifyContent: "center",
+-                flex: "0 0 auto",
+-              }}
+-            >
+-              <UserCheck size={20} />
+-            </div>
+-            <div>
+-              <h2 className="section-title" style={{ marginBottom: "2px" }}>Admin Delegation</h2>
+-              <p style={{ color: "var(--text-2)", fontSize: "13px" }}>Promote a registered user to admin access by email.</p>
+-            </div>
+-          </div>
+-
+-          <div className="form-group" style={{ flex: 1, minWidth: "260px", marginBottom: 0 }}>
+-            <label className="form-label">User Email</label>
+-            <input
+-              type="email"
+-              className="input"
+-              placeholder="user@example.com"
+-              value={delegateEmail}
+-              onChange={(e) => {
+-                setDelegateEmail(e.target.value);
+-                setDelegateMessage(null);
+-                setDelegateError(null);
+-              }}
+-              disabled={delegating}
+-            />
+-          </div>
+-
+-          <button type="submit" className="btn btn-success" style={{ height: "40px" }} disabled={delegating}>
+-            {delegating ? (
+-              <RefreshCw size={16} style={{ animation: "spin 0.6s linear infinite" }} />
+-            ) : (
+-              <UserCheck size={16} />
+-            )}
+-            Make User Admin
+-          </button>
+-        </form>
+-
+-        {(delegateMessage || delegateError) && (
+-          <div
+-            style={{
+-              marginTop: "var(--space-4)",
+-              padding: "var(--space-3) var(--space-4)",
+-              borderRadius: "var(--radius-md)",
+-              background: delegateError ? "var(--red-light)" : "var(--green-light)",
+-              color: delegateError ? "var(--red-text)" : "var(--green-text)",
+-              fontWeight: 600,
+-            }}
+-          >
+-            {delegateError || delegateMessage}
+-          </div>
+-        )}
+-      </div>
+-
+       {/* Filter Toolbar Card */}
+       <div className="card">
+diff --git a/src/app/admin-delegation/page.tsx b/src/app/admin-delegation/page.tsx
+new file mode 100644
+--- /dev/null
++++ b/src/app/admin-delegation/page.tsx
+@@ -0,0 +1,230 @@
++"use client";
++
++import React, { useEffect, useState } from "react";
++import { RefreshCw, Search, ShieldCheck, ShieldMinus, UserCheck } from "lucide-react";
++import { api } from "../../lib/api";
++import DataTable, { Column } from "../../components/DataTable";
++
++interface AdminUser {
++  id: string;
++  email: string;
++  first_name: string;
++  last_name: string;
++  phone_number: string | null;
++  referral_code: string;
++  kyc_status: string;
++  is_active: boolean;
++  is_staff: boolean;
++  date_joined: string;
++  last_login: string | null;
++}
++
++interface AdminListResponse {
++  users: AdminUser[];
++  meta: {
++    total: number;
++    page: number;
++    page_size: number;
++    total_pages: number;
++  };
++}
++
++interface MessageResponse {
++  detail: string;
++}
++
++function getErrorMessage(err: unknown, fallback: string) {
++  return err instanceof Error ? err.message : fallback;
++}
++
++export default function AdminDelegationPage() {
++  const [admins, setAdmins] = useState<AdminUser[]>([]);
++  const [meta, setMeta] = useState<AdminListResponse["meta"] | undefined>(undefined);
++  const [page, setPage] = useState(1);
++  const [search, setSearch] = useState("");
++  const [loading, setLoading] = useState(true);
++  const [error, setError] = useState<string | null>(null);
++  const [email, setEmail] = useState("");
++  const [actionLoading, setActionLoading] = useState<"make" | "remove" | null>(null);
++  const [message, setMessage] = useState<string | null>(null);
++  const [actionError, setActionError] = useState<string | null>(null);
++
++  const fetchAdmins = async () => {
++    setLoading(true);
++    setError(null);
++    try {
++      const res = await api.get<AdminListResponse>("/admin/admins", {
++        page,
++        page_size: 10,
++        search: search.trim() || undefined,
++      });
++      setAdmins(res.users || []);
++      setMeta(res.meta);
++    } catch (err: unknown) {
++      setError(getErrorMessage(err, "Failed to load admins."));
++    } finally {
++      setLoading(false);
++    }
++  };
++
++  useEffect(() => {
++    fetchAdmins();
++  }, [page]);
++
++  const resetFeedback = () => {
++    setMessage(null);
++    setActionError(null);
++  };
++
++  const runAdminAction = async (action: "make" | "remove", targetEmail = email) => {
++    resetFeedback();
++    const cleanEmail = targetEmail.trim();
++    if (!cleanEmail) {
++      setActionError("Enter the user's email address.");
++      return;
++    }
++
++    setActionLoading(action);
++    try {
++      const path = action === "make" ? "/admin/users/delegate-admin" : "/admin/admins/revoke";
++      const res = await api.post<MessageResponse>(path, { email: cleanEmail });
++      setMessage(res.detail);
++      setEmail("");
++      await fetchAdmins();
++    } catch (err: unknown) {
++      setActionError(getErrorMessage(err, action === "make" ? "Failed to make admin." : "Failed to remove admin."));
++    } finally {
++      setActionLoading(null);
++    }
++  };
++
++  const handleSubmit = (e: React.FormEvent) => {
++    e.preventDefault();
++    runAdminAction("make");
++  };
++
++  const handleSearchSubmit = (e: React.FormEvent) => {
++    e.preventDefault();
++    setPage(1);
++    fetchAdmins();
++  };
++
++  const columns: Column<AdminUser>[] = [
++    {
++      header: "Admin",
++      accessor: "email",
++      cell: (row) => (
++        <div style={{ display: "flex", flexDirection: "column" }}>
++          <span style={{ fontWeight: 700 }}>{row.email}</span>
++          <span style={{ color: "var(--text-2)", fontSize: "12px" }}>
++            {[row.first_name, row.last_name].filter(Boolean).join(" ") || "No name on profile"}
++          </span>
++        </div>
++      ),
++    },
++    {
++      header: "Account",
++      accessor: "is_active",
++      cell: (row) => (
++        <span style={{ color: row.is_active ? "var(--green-text)" : "var(--red-text)", fontWeight: 600 }}>
++          {row.is_active ? "Active" : "Suspended"}
++        </span>
++      ),
++    },
++    {
++      header: "Added",
++      accessor: "date_joined",
++      cell: (row) => new Date(row.date_joined).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }),
++    },
++    {
++      header: "Actions",
++      cell: (row) => (
++        <button
++          type="button"
++          className="btn btn-danger btn-sm"
++          onClick={() => runAdminAction("remove", row.email)}
++          disabled={actionLoading !== null}
++        >
++          <ShieldMinus size={14} />
++          Remove Admin
++        </button>
++      ),
++    },
++  ];
++
++  return (
++    <div>
++      <div className="page-header">
++        <div>
++          <h1 className="page-title">Admin Delegation</h1>
++          <p style={{ color: "var(--text-2)", marginTop: "2px" }}>Review current admins, grant access, and remove delegated admin access.</p>
++        </div>
++        <button onClick={fetchAdmins} className="btn btn-secondary" disabled={loading}>
++          <RefreshCw size={16} style={{ animation: loading ? "spin 0.6s linear infinite" : "none" }} />
++          Sync Admins
++        </button>
++      </div>
++
++      {error && (
++        <div style={{ background: "var(--red-light)", color: "var(--red-text)", padding: "var(--space-4)", borderRadius: "var(--radius-lg)", marginBottom: "var(--space-6)" }}>
++          {error}
++        </div>
++      )}
++
++      <div className="grid-cols-2">
++        <div className="card">
++          <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "center", marginBottom: "var(--space-4)" }}>
++            <div style={{ width: "40px", height: "40px", borderRadius: "var(--radius-md)", background: "var(--blue-light)", color: "var(--blue)", display: "flex", alignItems: "center", justifyContent: "center" }}>
++              <ShieldCheck size={20} />
++            </div>
++            <div>
++              <h2 className="section-title" style={{ marginBottom: "2px" }}>Current Admins</h2>
++              <p style={{ color: "var(--text-2)", fontSize: "13px" }}>{meta?.total ?? admins.length} admin account{(meta?.total ?? admins.length) === 1 ? "" : "s"}</p>
++            </div>
++          </div>
++
++          <form onSubmit={handleSearchSubmit} style={{ display: "flex", gap: "var(--space-2)" }}>
++            <div style={{ position: "relative", flex: 1 }}>
++              <Search size={16} style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "var(--text-3)" }} />
++              <input
++                type="text"
++                className="input"
++                placeholder="Search admins..."
++                value={search}
++                onChange={(e) => setSearch(e.target.value)}
++                style={{ paddingLeft: "40px" }}
++              />
++            </div>
++            <button type="submit" className="btn btn-secondary">Search</button>
++          </form>
++        </div>
++
++        <div className="card">
++          <form onSubmit={handleSubmit}>
++            <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "center", marginBottom: "var(--space-4)" }}>
++              <div style={{ width: "40px", height: "40px", borderRadius: "var(--radius-md)", background: "var(--green-light)", color: "var(--green-text)", display: "flex", alignItems: "center", justifyContent: "center" }}>
++                <UserCheck size={20} />
++              </div>
++              <div>
++                <h2 className="section-title" style={{ marginBottom: "2px" }}>Make Admin</h2>
++                <p style={{ color: "var(--text-2)", fontSize: "13px" }}>Enter a registered user's email address.</p>
++              </div>
++            </div>
++
++            <div className="form-group">
++              <label className="form-label">User Email</label>
++              <input
++                type="email"
++                className="input"
++                placeholder="user@example.com"
++                value={email}
++                onChange={(e) => {
++                  setEmail(e.target.value);
++                  resetFeedback();
++                }}
++                disabled={actionLoading !== null}
++              />
++            </div>
++
++            <button type="submit" className="btn btn-success" disabled={actionLoading !== null}>
++              {actionLoading === "make" ? <RefreshCw size={16} style={{ animation: "spin 0.6s linear infinite" }} /> : <UserCheck size={16} />}
++              Make User Admin
++            </button>
++          </form>
++        </div>
++      </div>
++
++      {(message || actionError) && (
++        <div style={{ background: actionError ? "var(--red-light)" : "var(--green-light)", color: actionError ? "var(--red-text)" : "var(--green-text)", padding: "var(--space-4)", borderRadius: "var(--radius-lg)", marginBottom: "var(--space-6)", fontWeight: 600 }}>
++          {actionError || message}
++        </div>
++      )}
++
++      <DataTable
++        columns={columns}
++        data={admins}
++        loading={loading}
++        meta={meta}
++        onPageChange={setPage}
++        emptyMessage="No admin accounts found."
++      />
++    </div>
++  );
++}

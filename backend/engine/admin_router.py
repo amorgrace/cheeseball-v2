@@ -152,7 +152,11 @@ async def delegate_admin(request, payload: AdminDelegateSchema):
         if not email:
             return 400, MessageSchema(detail="Email is required.")
 
-        user = CustomUser.objects.get(email=email)
+        try:
+            user = CustomUser.objects.get(email=email)
+        except CustomUser.DoesNotExist:
+            return 400, MessageSchema(detail=f"No account found with email '{email}'. Make sure the user is registered first.")
+
         if user.is_staff:
             return MessageSchema(detail=f"{user.email} is already an admin.")
 
@@ -204,11 +208,15 @@ async def revoke_admin(request, payload: AdminDelegateSchema):
         if not email:
             return 400, MessageSchema(detail="Email is required.")
 
-        user = CustomUser.objects.get(email=email)
+        try:
+            user = CustomUser.objects.get(email=email)
+        except CustomUser.DoesNotExist:
+            return 400, MessageSchema(detail=f"No account found with email '{email}'.")
+
         if user.id == request.auth.id:
             return 400, MessageSchema(detail="You cannot remove your own admin access.")
         if user.is_superuser:
-            return 400, MessageSchema(detail="Superuser admin access cannot be removed here.")
+            return 400, MessageSchema(detail=f"{user.email} is a superuser — their access can only be changed via the Django admin panel.")
         if not user.is_staff:
             return MessageSchema(detail=f"{user.email} is not an admin.")
 

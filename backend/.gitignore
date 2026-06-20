@@ -1,0 +1,24 @@
+.env
+*.env
+
+__pycache__/
+*.py[cod]
+*.sqlite3
+
+.venv/
+venv/
+env/
+
+staticfiles/
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+.DS_Store
+Thumbs.db
+
+# Database
+db.sqlite3
+logs/
+test_quidax*.py

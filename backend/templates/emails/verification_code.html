@@ -1,0 +1,20 @@
+{% extends "emails/base.html" %}
+
+{% block content %}
+<div class="eyebrow">Account Security</div>
+<p class="intro-copy">{{ intro }}</p>
+<div class="otp-wrap">
+    <div class="otp-head">
+        <div class="otp-title">Your verification code is ready</div>
+        <div class="otp-subtitle">Use this one-time passcode to verify your account and continue securely.</div>
+    </div>
+    <div class="otp-label">{{ action_label }}</div>
+    <div class="otp-code">{{ code }}</div>
+    <div class="otp-meta">Expires in {{ expires_in_minutes }} minutes</div>
+    <div class="otp-steps">
+        <p>Enter this code in the app exactly as shown to complete verification and unlock your account.</p>
+    </div>
+</div>
+<p>If you do not see future CheeseBall emails in your inbox, please check your spam or junk folder.</p>
+<p>If the code does not work, request a new one and use the most recent email you received.</p>
+{% endblock %}

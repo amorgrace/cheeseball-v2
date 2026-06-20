@@ -1,0 +1,23 @@
+
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('rates', '0001_initial'),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name='rateconfiguration',
+            name='asset',
+            field=models.CharField(choices=[('BTC', 'Bitcoin'), ('ETH', 'Ethereum'), ('USDT', 'Tether')], default='BTC', max_length=10, unique=True),
+        ),
+        migrations.AlterField(
+            model_name='ratequote',
+            name='asset',
+            field=models.CharField(choices=[('BTC', 'Bitcoin'), ('ETH', 'Ethereum'), ('USDT', 'Tether')], default='BTC', max_length=10),
+        ),
+    ]

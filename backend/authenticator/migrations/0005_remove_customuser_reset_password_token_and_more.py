@@ -1,0 +1,61 @@
+
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('authenticator', '0004_customuser_reset_password_token_and_more'),
+    ]
+
+    operations = [
+        migrations.RemoveField(
+            model_name='customuser',
+            name='reset_password_token',
+        ),
+        migrations.RemoveField(
+            model_name='customuser',
+            name='verification_token',
+        ),
+        migrations.AddField(
+            model_name='customuser',
+            name='last_password_reset_at',
+            field=models.DateTimeField(blank=True, null=True),
+        ),
+        migrations.AddField(
+            model_name='customuser',
+            name='reset_password_failed_attempts',
+            field=models.PositiveSmallIntegerField(default=0),
+        ),
+        migrations.AddField(
+            model_name='customuser',
+            name='reset_password_token_hash',
+            field=models.CharField(blank=True, max_length=64, null=True),
+        ),
+        migrations.AddField(
+            model_name='customuser',
+            name='reset_password_token_sent_at',
+            field=models.DateTimeField(blank=True, null=True),
+        ),
+        migrations.AddField(
+            model_name='customuser',
+            name='verification_failed_attempts',
+            field=models.PositiveSmallIntegerField(default=0),
+        ),
+        migrations.AddField(
+            model_name='customuser',
+            name='verification_token_hash',
+            field=models.CharField(blank=True, max_length=64, null=True),
+        ),
+        migrations.AddField(
+            model_name='customuser',
+            name='verification_token_sent_at',
+            field=models.DateTimeField(blank=True, null=True),
+        ),
+        migrations.AddField(
+            model_name='customuser',
+            name='verified_at',
+            field=models.DateTimeField(blank=True, null=True),
+        ),
+    ]

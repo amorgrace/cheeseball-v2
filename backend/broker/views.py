@@ -23,7 +23,7 @@ def create_sell_transaction(request, payload):
 
 def list_transactions(request):
     queryset = Transaction.objects.all() if request.auth.is_staff else Transaction.objects.filter(user=request.auth)
-    return list(queryset)
+    return queryset.order_by("-created_at")
 
 
 def get_transaction(request, transaction_id: str):

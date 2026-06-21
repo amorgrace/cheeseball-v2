@@ -66,6 +66,11 @@ def paginate_qs(qs, page: int = 1, page_size: int = 25):
 
 @router.get("/stats", response=DashboardStatsSchema)
 async def dashboard_stats(request):
+    from django.core.cache import cache
+    cached_stats = cache.get("admin_dashboard_stats")
+    if cached_stats is not None:
+        return cached_stats
+
     @sync_to_async
     def _inner():
         from authenticator.models import CustomUser
@@ -102,7 +107,9 @@ async def dashboard_stats(request):
             total_volume_ngn=total_volume,
             total_volume_24h_ngn=volume_24h,
         )
-    return await _inner()
+    result = await _inner()
+    cache.set("admin_dashboard_stats", result, 5 * 60)  # Cache for 5 minutes
+    return result
 
 
 # ─── Users ────────────────────────────────────────────────────────────────────

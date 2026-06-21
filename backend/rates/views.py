@@ -1,10 +1,16 @@
+from django.core.cache import cache
 from .models import Asset
 from .schemas import BuyQuoteInputSchema, SellQuoteInputSchema
 from .services import build_quote
 
 
 def list_assets():
-    return list(Asset.objects.filter(is_active=True))
+    cached_assets = cache.get("list_assets")
+    if cached_assets is not None:
+        return cached_assets
+    assets = list(Asset.objects.filter(is_active=True))
+    cache.set("list_assets", assets, 60 * 60)  # Cache for 1 hour
+    return assets
 
 
 def create_buy_quote(payload: BuyQuoteInputSchema):

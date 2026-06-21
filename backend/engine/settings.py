@@ -94,6 +94,13 @@ if "test" in sys.argv:
     database_url = os.environ.get("TEST_DATABASE_URL", database_url)
 DATABASES = {"default": dj_database_url.parse(database_url)}
 
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-snowflake",
+    }
+}
+
 AUTH_USER_MODEL = "authenticator.CustomUser"
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -210,7 +217,7 @@ LOGGING = {
         "django": {
             "handlers": ["console"],
             "level": "INFO",
-            "propagate": True,
+            "propagate": False,
         },
         "django.request": {
             "handlers": ["console"],

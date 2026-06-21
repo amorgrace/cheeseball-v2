@@ -21,9 +21,17 @@ from .views import (
 router = Router(tags=["Payments"])
 
 
+from django.core.cache import cache
+
 @router.get("/instructions", response=PaymentInstructionsSchema)
 def instructions(request):
-    return get_payment_instructions()
+    cached_instructions = cache.get("payment_instructions")
+    if cached_instructions is not None:
+        return cached_instructions
+    
+    instructions_data = get_payment_instructions()
+    cache.set("payment_instructions", instructions_data, 60 * 60)  # Cache for 1 hour
+    return instructions_data
 
 
 @router.post("/setup", response=PaymentRecordSchema, auth=JWTAuth())

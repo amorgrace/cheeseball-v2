@@ -1,5 +1,6 @@
 
 from ninja import Router
+from ninja.pagination import paginate, PageNumberPagination
 
 from authenticator.auth import JWTAuth
 
@@ -31,6 +32,7 @@ def create_sell(request, payload: SellTransactionCreateSchema):
 
 
 @router.get("/transactions", response=list[TransactionSchema], auth=JWTAuth())
+@paginate(PageNumberPagination, page_size=10)
 def transactions(request):
     return list_transactions(request)
 

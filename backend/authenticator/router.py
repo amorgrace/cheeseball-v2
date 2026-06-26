@@ -1,5 +1,29 @@
 from ninja import Router
-from django_ratelimit.decorators import ratelimit
+
+from asgiref.sync import sync_to_async
+from functools import wraps
+from django.conf import settings
+from django.utils.module_loading import import_string
+from django_ratelimit.core import is_ratelimited
+from django_ratelimit.exceptions import Ratelimited
+
+def ratelimit(group=None, key=None, rate=None, method=(None,), block=True):
+    def decorator(fn):
+        @wraps(fn)
+        async def _wrapped(request, *args, **kw):
+            old_limited = getattr(request, 'limited', False)
+            ratelimited = await sync_to_async(is_ratelimited)(
+                request=request, group=group, fn=fn,
+                key=key, rate=rate, method=method,
+                increment=True
+            )
+            request.limited = ratelimited or old_limited
+            if ratelimited and block:
+                cls = getattr(settings, 'RATELIMIT_EXCEPTION_CLASS', Ratelimited)
+                raise (import_string(cls) if isinstance(cls, str) else cls)()
+            return await fn(request, *args, **kw)
+        return _wrapped
+    return decorator
 
 from .auth import JWTAuth
 from .schemas import (

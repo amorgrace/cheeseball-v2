@@ -26,14 +26,14 @@ def _json_decimal_default(value):
 
 
 def _quidax_request(path: str, *, params: dict | None = None, data: dict | None = None, method: str = "GET") -> dict:
-    if not settings.QUIDAX_SECRET_KEY:
-        raise ValidationError("Quidax secret key is not configured")
+    if not settings.QUIDAX_API_KEY:
+        raise ValidationError("Quidax API key is not configured")
 
     base_url = settings.QUIDAX_API_BASE_URL.rstrip("/")
     url = f"{base_url}/{path.lstrip('/')}"
 
     headers = {
-        "Authorization": f"Bearer {settings.QUIDAX_SECRET_KEY}",
+        "Authorization": f"Bearer {settings.QUIDAX_API_KEY}",
         "Accept": "application/json",
         "Content-Type": "application/json",
     }
@@ -211,6 +211,127 @@ def initiate_crypto_withdrawal(user, *, currency: str, amount, fund_uid: str, ne
     _check_quidax_response(response, "crypto withdrawal")
     
     return _provider_data(response)
+
+
+def sweep_sub_account_to_merchant(quidax_user_id: str, *, currency: str, merchant_address: str, network: str = "", min_amount: str = "0.0001") -> dict:
+    """
+    Sweeps available balance of a given currency from a Quidax sub-account
+    to the merchant's main wallet address.
+
+    Returns a dict summarising what happened:
+      { "swept": bool, "amount": str, "currency": str, "response": dict | None, "reason": str }
+    """
+    from decimal import Decimal, InvalidOperation
+
+    currency_lower = currency.lower().strip()
+    currency_upper = currency.upper().strip()
+
+    # 1. Fetch the sub-account's balance
+    balance_response = _quidax_request(f"users/{quidax_user_id}/wallets/{currency_lower}")
+    if balance_response.get("ok") is False:
+        return {"swept": False, "currency": currency_upper, "amount": "0", "reason": f"balance fetch failed: {balance_response.get('error')}", "response": None}
+
+    data = _provider_data(balance_response)
+    try:
+        available = Decimal(str(data.get("balance", "0")))
+    except (InvalidOperation, TypeError):
+        available = Decimal("0")
+
+    logger.info("Sweep check: sub-account %s has %s %s available", quidax_user_id, available, currency_upper)
+
+    try:
+        minimum = Decimal(str(min_amount))
+    except (InvalidOperation, TypeError):
+        minimum = Decimal("0.0001")
+
+    if available <= minimum:
+        return {
+            "swept": False,
+            "currency": currency_upper,
+            "amount": str(available),
+            "reason": f"balance {available} is at or below minimum sweep threshold {minimum}",
+            "response": None,
+        }
+
+    # 2. Initiate withdrawal from the sub-account to the merchant address
+    payload: dict = {
+        "currency": currency_lower,
+        "amount": str(available),
+        "fund_uid": merchant_address,
+    }
+    if network:
+        payload["network"] = network
+
+    withdraw_response = _quidax_request(
+        f"users/{quidax_user_id}/withdraws",
+        data=payload,
+        method="POST",
+    )
+
+    if withdraw_response.get("ok") is False:
+        return {
+            "swept": False,
+            "currency": currency_upper,
+            "amount": str(available),
+            "reason": f"withdrawal failed: {withdraw_response.get('error')}",
+            "response": withdraw_response,
+        }
+
+    logger.info("Sweep sent: %s %s from sub-account %s -> %s", available, currency_upper, quidax_user_id, merchant_address)
+    return {
+        "swept": True,
+        "currency": currency_upper,
+        "amount": str(available),
+        "reason": "sweep initiated successfully",
+        "response": _provider_data(withdraw_response),
+    }
+
+
+def sweep_all_sub_accounts_to_merchant(*, currencies: list[str], merchant_addresses: dict[str, str], networks: dict[str, str] | None = None, min_amount: str = "0.0001") -> list[dict]:
+    """
+    Sweeps all known sub-accounts in the database for the given currencies.
+
+    merchant_addresses: { "USDT": "0xABC...", "BTC": "bc1q...", ... }
+    networks:           { "USDT": "trc20", ... }  (optional, per-currency)
+
+    Returns a list of result dicts from sweep_sub_account_to_merchant.
+    """
+    from .models import QuidaxSubAccount
+
+    networks = networks or {}
+    results = []
+
+    sub_accounts = QuidaxSubAccount.objects.select_related("user").all()
+    logger.info("Sweeping %d sub-account(s) for currencies: %s", sub_accounts.count(), currencies)
+
+    for sub in sub_accounts:
+        for currency in currencies:
+            currency_upper = currency.upper()
+            merchant_address = merchant_addresses.get(currency_upper, "")
+            if not merchant_address:
+                results.append({
+                    "swept": False,
+                    "quidax_user_id": sub.quidax_id,
+                    "user": sub.user.email,
+                    "currency": currency_upper,
+                    "amount": "0",
+                    "reason": f"no merchant address configured for {currency_upper}",
+                    "response": None,
+                })
+                continue
+
+            result = sweep_sub_account_to_merchant(
+                sub.quidax_id,
+                currency=currency_upper,
+                merchant_address=merchant_address,
+                network=networks.get(currency_upper, ""),
+                min_amount=min_amount,
+            )
+            result["quidax_user_id"] = sub.quidax_id
+            result["user"] = sub.user.email
+            results.append(result)
+
+    return results
 
 
 def create_pending_sell_deposit(*, transaction_obj, wallet_address: QuidaxWalletAddress) -> QuidaxDeposit:
@@ -477,7 +598,7 @@ def _try_advance_sell_transaction(deposit: QuidaxDeposit) -> None:
 
 def get_quidax_diagnostics() -> dict:
     return {
-        "configured": bool(settings.QUIDAX_SECRET_KEY and settings.QUIDAX_WEBHOOK_SECRET),
+        "configured": bool(settings.QUIDAX_API_KEY and settings.QUIDAX_WEBHOOK_SECRET),
         "base_url": settings.QUIDAX_API_BASE_URL,
         "user": _quidax_request("users/me"),
     }

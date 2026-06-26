@@ -1,4 +1,5 @@
 from uuid import UUID
+from django_ratelimit.decorators import ratelimit
 
 from ninja import Router
 
@@ -52,6 +53,7 @@ def execute_convert(request, payload: ConversionExecuteSchema):
 
 
 @router.post("/withdrawals", response=WithdrawalSchema, auth=JWTAuth())
+@ratelimit(key='user_or_ip', rate='2/m', block=True)
 def create_withdrawal_endpoint(request, payload: WithdrawalCreateSchema):
     return initiate_withdrawal(request, payload)
 

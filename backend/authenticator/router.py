@@ -1,4 +1,5 @@
 from ninja import Router
+from django_ratelimit.decorators import ratelimit
 
 from .auth import JWTAuth
 from .schemas import (
@@ -35,11 +36,13 @@ router = Router(tags=["Auth"])
 
 
 @router.post("/register", response=VerificationChallengeSchema)
+@ratelimit(key='ip', rate='5/m', block=True)
 async def register(request, payload: RegisterSchema):
     return await register_user(payload)
 
 
 @router.post("/token/pair", response=TokenSchema)
+@ratelimit(key='ip', rate='5/m', block=True)
 async def login(request, payload: LoginSchema):
     return await login_user(request, payload)
 
@@ -60,11 +63,13 @@ async def verify_reset_token_endpoint(request, payload: VerifyResetTokenSchema):
 
 
 @router.post("/resend-token", response=VerificationChallengeSchema)
+@ratelimit(key='ip', rate='3/h', block=True)
 async def resend_token(request, payload: ResendTokenSchema):
     return await resend_user_token(payload)
 
 
 @router.post("/forgot-password", response=PasswordResetChallengeSchema)
+@ratelimit(key='ip', rate='3/h', block=True)
 async def forgot_password(request, payload: PasswordResetRequestSchema):
     return await request_password_reset(payload)
 
@@ -99,6 +104,7 @@ class UserLookupResponse(Schema):
 
 
 @router.get("/users/lookup", response=UserLookupResponse, auth=JWTAuth())
+@ratelimit(key='ip', rate='10/m', block=True)
 async def user_lookup(request, email: str):
     from .views import lookup_user
     return await lookup_user(request, query=email)

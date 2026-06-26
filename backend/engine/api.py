@@ -21,6 +21,7 @@ api = NinjaAPI(title="CheeseBall Crypto API", version="1.0.0")
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.exceptions import ObjectDoesNotExist
 from ninja_jwt.exceptions import TokenError, InvalidToken, AuthenticationFailed
+from django_ratelimit.exceptions import Ratelimited
 
 @api.exception_handler(DjangoValidationError)
 def django_validation_error_handler(request, exc):
@@ -61,6 +62,11 @@ def value_error_handler(request, exc):
 def permission_error_handler(request, exc):
     logger.warning(f"Permission Error: {exc}")
     return api.create_response(request, {"detail": str(exc)}, status=403)
+
+@api.exception_handler(Ratelimited)
+def ratelimited_handler(request, exc):
+    logger.warning(f"Rate limited: {request.path}")
+    return api.create_response(request, {"detail": "Too many requests. Please try again later."}, status=429)
 
 @api.exception_handler(Exception)
 def unhandled_exception_handler(request, exc):

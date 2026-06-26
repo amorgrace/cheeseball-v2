@@ -120,7 +120,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Optional JWT lifetimes (used by django-ninja-jwt defaults)
 NINJA_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     # Explicitly pass SECRET_KEY so PyJWT never falls back to a short/wrong key.
     "SIGNING_KEY": SECRET_KEY,
@@ -161,7 +161,7 @@ AUTH_COOKIE_SECURE = os.getenv("AUTH_COOKIE_SECURE", "true").lower() == "true"
 AUTH_COOKIE_SAMESITE = os.getenv("AUTH_COOKIE_SAMESITE", "Lax")
 AUTH_COOKIE_DOMAIN = os.getenv("AUTH_COOKIE_DOMAIN") or None
 AUTH_COOKIE_PATH = os.getenv("AUTH_COOKIE_PATH", "/")
-AUTH_ACCESS_COOKIE_MAX_AGE = int(os.getenv("AUTH_ACCESS_COOKIE_MAX_AGE", "900"))
+AUTH_ACCESS_COOKIE_MAX_AGE = int(os.getenv("AUTH_ACCESS_COOKIE_MAX_AGE", "1800"))
 AUTH_REFRESH_COOKIE_MAX_AGE = int(os.getenv("AUTH_REFRESH_COOKIE_MAX_AGE", "604800"))
 
 ANYMAIL = {
@@ -179,6 +179,11 @@ BANK_NAME = os.getenv("BANK_NAME", "Demo Bank")
 BROKER_BTC_WALLET_ADDRESS = os.getenv("BROKER_BTC_WALLET_ADDRESS", "")
 BROKER_ETH_WALLET_ADDRESS = os.getenv("BROKER_ETH_WALLET_ADDRESS", "")
 BROKER_USDT_WALLET_ADDRESS = os.getenv("BROKER_USDT_WALLET_ADDRESS", "")
+
+# Quidax merchant wallet addresses for sweeping sub-account funds
+MERCHANT_USDT_ADDRESS = os.getenv("MERCHANT_USDT_ADDRESS", "")
+MERCHANT_BTC_ADDRESS = os.getenv("MERCHANT_BTC_ADDRESS", "")
+MERCHANT_ETH_ADDRESS = os.getenv("MERCHANT_ETH_ADDRESS", "")
 
 
 # ------------------------------------------------------------------------------

@@ -1,20 +1,72 @@
 {% extends "emails/base.html" %}
 
 {% block content %}
-<div class="eyebrow">Account Security</div>
-<p class="intro-copy">{{ intro }}</p>
-<div class="otp-wrap">
-    <div class="otp-head">
-        <div class="otp-title">Your verification code is ready</div>
-        <div class="otp-subtitle">Use this one-time passcode to verify your account and continue securely.</div>
-    </div>
-    <div class="otp-label">{{ action_label }}</div>
-    <div class="otp-code">{{ code }}</div>
-    <div class="otp-meta">Expires in {{ expires_in_minutes }} minutes</div>
-    <div class="otp-steps">
-        <p>Enter this code in the app exactly as shown to complete verification and unlock your account.</p>
-    </div>
-</div>
-<p>If you do not see future CheeseBall emails in your inbox, please check your spam or junk folder.</p>
-<p>If the code does not work, request a new one and use the most recent email you received.</p>
+<!-- Status Pill -->
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+    <tr>
+        <td align="center" style="padding-top: 12px;">
+            <table border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                    <td style="background-color: #EEF3FF; border-radius: 100px; padding: 8px 24px;">
+                        <span style="font-size: 12px; font-weight: 700; color: #1A6FFF; letter-spacing: 0.05em; text-transform: uppercase;">
+                            Account Security
+                        </span>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+<!-- Main Heading -->
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 8px;">
+    <tr>
+        <td align="center">
+            <h2 style="font-size: 24px; font-weight: 800; color: #0F172A !important; margin: 0; line-height: 1.25; letter-spacing: -0.03em;">
+                {{ headline|default:"Verify Your Account" }}
+            </h2>
+        </td>
+    </tr>
+</table>
+
+<!-- Message Body -->
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
+    <tr>
+        <td align="center">
+            <p style="font-size: 14px; color: #475569 !important; line-height: 1.6; margin: 0; max-width: 80%;">
+                {{ intro }}
+            </p>
+        </td>
+    </tr>
+</table>
+
+<!-- Verification Code Box -->
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
+    <tr>
+        <td align="center">
+            <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 16px; padding: 24px 32px; display: inline-block;">
+                <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #64748B !important; margin-bottom: 12px;">
+                    Verification Code
+                </div>
+                <div style="font-size: 42px; font-weight: 800; color: #0F172A !important; letter-spacing: 0.25em; font-family: 'Courier New', monospace; line-height: 1; margin-bottom: 12px;">
+                    {{ code }}
+                </div>
+                <div style="font-size: 13px; font-weight: 500; color: #94A3B8 !important;">
+                    Expires in {{ expires_in_minutes }} minutes
+                </div>
+            </div>
+        </td>
+    </tr>
+</table>
+
+<!-- Security Warning -->
+<table border="0" cellpadding="0" cellspacing="0" width="100%">
+    <tr>
+        <td align="center">
+            <p style="font-size: 13px; color: #94A3B8 !important; margin: 0; line-height: 1.5; max-width: 90%;">
+                Never share this code with anyone. Our team will never ask you for your verification code.
+            </p>
+        </td>
+    </tr>
+</table>
 {% endblock %}

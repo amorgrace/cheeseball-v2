@@ -1,4 +1,5 @@
 import logging
+from notifications.services import send_kyc_prompt_email
 import hashlib
 import secrets
 import uuid
@@ -327,6 +328,9 @@ async def verify_user_token(payload: VerifyTokenSchema):
         ]
     )
 
+    # Send KYC prompt email now that the account is active
+    await sync_to_async(send_kyc_prompt_email)(user)
+
     access = await sync_to_async(AccessToken.for_user)(user)
     return auth_success_response(
         message="Account verified successfully",
@@ -489,6 +493,19 @@ async def confirm_password_reset(payload: PasswordResetConfirmSchema):
             "last_password_reset_at",
         ]
     )
+
+    # Notify user of password reset completion
+    try:
+        from notifications.services import notify
+        from notifications.models import Notification
+        await sync_to_async(notify)(
+            user,
+            title="Password Changed Successfully",
+            message="Your account password was successfully updated. If you did not initiate this change, please contact support and secure your account immediately.",
+            notification_type=Notification.GENERAL,
+        )
+    except Exception:
+        pass
 
     return {"message": "Password reset successful"}
 

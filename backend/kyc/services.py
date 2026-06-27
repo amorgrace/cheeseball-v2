@@ -29,6 +29,19 @@ def submit_kyc(*, user, payload):
     )
     user.kyc_status = user.KYC_SUBMITTED
     user.save(update_fields=["kyc_status"])
+
+    # Send KYC Submitted notification email
+    try:
+        from notifications.services import notify
+        notify(
+            user,
+            title="Verification Under Review",
+            message="Your identity documents have been successfully submitted and are currently under review. This process usually takes 24–48 hours.",
+            notification_type="KYC_SUBMITTED",
+        )
+    except Exception:
+        pass
+
     return submission
 
 

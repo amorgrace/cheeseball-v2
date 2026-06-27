@@ -1,0 +1,123 @@
+{% extends "emails/base.html" %}
+
+{% block content %}
+
+<!-- Status Pill -->
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+    <tr>
+        <td align="center" style="padding-top: 12px;">
+            <table border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                    <td style="background-color: {{ pill_bg|default:'#EEF3FF' }}; border-radius: 100px; padding: 8px 24px;">
+                        <span style="font-size: 12px; font-weight: 700; color: {{ status_color|default:'#1A6FFF' }}; letter-spacing: 0.05em; text-transform: uppercase;">
+                            {{ status_badge|default:category|default:"Activity" }}
+                        </span>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+<!-- Main Heading -->
+<table border="0" cellpadding="0" cellspacing="0" width="100%">
+    <tr>
+        <td align="center">
+            <h2 style="font-size: 24px; font-weight: 800; color: #0F172A !important; margin: 0 0 12px; line-height: 1.25; letter-spacing: -0.03em;">
+                {{ notification_title|default:"Account Update" }}
+            </h2>
+        </td>
+    </tr>
+</table>
+
+<!-- Big Amount (Modern Typographic Style) -->
+{% if big_amount %}
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 28px;">
+    <tr>
+        <td align="center" style="padding: 16px 0;">
+            <div style="font-size: 36px; font-weight: 800; color: {{ status_color|default:'#0F172A' }} !important; letter-spacing: -0.04em; line-height: 1;">
+                {{ big_amount }}
+            </div>
+        </td>
+    </tr>
+</table>
+{% else %}
+<!-- Spacer if no big amount -->
+<table border="0" cellpadding="0" cellspacing="0" width="100%">
+    <tr><td style="height: 16px; font-size: 1px; line-height: 1px;">&nbsp;</td></tr>
+</table>
+{% endif %}
+
+<!-- Message Body -->
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 28px;">
+    <tr>
+        <td>
+            <p style="font-size: 15px; color: #0F172A !important; font-weight: 600; margin: 0 0 8px;">
+                Hi {{ user_name|default:"there" }},
+            </p>
+            <p style="font-size: 14px; color: #475569 !important; line-height: 1.75; margin: 0;">
+                {{ notification_message }}
+            </p>
+        </td>
+    </tr>
+</table>
+
+<!-- Transaction Details -->
+{% if details %}
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
+    <tr>
+        <td style="padding-bottom: 12px; border-bottom: 2px solid #E2E8F0;">
+            <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #64748B !important;">
+                Details
+            </span>
+        </td>
+    </tr>
+    {% for key, value in details.items %}
+    <tr>
+        <td style="padding: 14px 0; border-bottom: 1px solid #F1F5F9;">
+            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                    <td width="40%" style="font-size: 13px; color: #64748B !important; font-weight: 500;">
+                        {{ key }}
+                    </td>
+                    <td width="60%" align="right" style="font-size: 13px; font-weight: 600; color: #0F172A !important;">
+                        {% if "ID" in key or "Hash" in key or "Tx" in key or "Ref" in key %}
+                            <span style="font-family: 'Courier New', monospace; font-size: 12px; color: #475569; background-color: #F1F5F9; padding: 4px 8px; border-radius: 6px; letter-spacing: 0.02em;">{{ value }}</span>
+                        {% else %}
+                            {{ value }}
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% endif %}
+
+<!-- CTA Button -->
+{% if cta_text %}
+<table border="0" cellpadding="0" cellspacing="0" width="100%">
+    <tr>
+        <td align="center">
+            <a href="{{ cta_url|default:'#' }}" target="_blank"
+               style="display: inline-block; background-color: {{ cta_color|default:'#1A6FFF' }}; color: #FFFFFF !important; font-size: 14px; font-weight: 700; text-decoration: none; padding: 14px 48px; border-radius: 10px; letter-spacing: 0.02em;">
+                {{ cta_text }}
+            </a>
+        </td>
+    </tr>
+</table>
+
+<!-- Secondary link -->
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 16px;">
+    <tr>
+        <td align="center">
+            <span style="font-size: 12px; color: #94A3B8;">
+                Questions? <a href="mailto:support@cheeseballapp.com" style="color: #1A6FFF; text-decoration: none; font-weight: 600;">Contact our team</a>
+            </span>
+        </td>
+    </tr>
+</table>
+{% endif %}
+
+{% endblock %}

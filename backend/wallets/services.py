@@ -236,6 +236,23 @@ def complete_withdrawal(withdrawal: Withdrawal, admin_user=None):
     withdrawal.approved_by = admin_user
     withdrawal.reviewed_at = timezone.now()
     withdrawal.save(update_fields=["status", "completed_at", "approved_by", "reviewed_at"])
+
+    # Notify user of instantly processed crypto withdrawals
+    if withdrawal.asset.code != NGN_CODE:
+        try:
+            from notifications.services import notify
+            from notifications.models import Notification
+            notify(
+                withdrawal.user,
+                title="Withdrawal Processed",
+                message=f"Your withdrawal of {withdrawal.amount} {withdrawal.asset.code} has been processed and sent.",
+                notification_type=Notification.WITHDRAWAL_APPROVED,
+                reference_id=withdrawal.id,
+                reference_type="Withdrawal",
+            )
+        except Exception:
+            pass
+
     return withdrawal
 
 

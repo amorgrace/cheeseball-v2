@@ -1,379 +1,121 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light">
     <meta name="supported-color-schemes" content="light">
     <title>{{ headline }}</title>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-
         :root {
-            color-scheme: light only;
-            supported-color-schemes: light;
+            color-scheme: light !important;
+            supported-color-schemes: light !important;
         }
-
-        body {
-            background: #EFF6FF !important;
-            font-family: "DM Sans", "Segoe UI", Arial, sans-serif;
-            color: #1E4A7B !important;
-            -webkit-font-smoothing: antialiased;
-            color-scheme: light only;
-        }
-
-        .preheader {
-            display: none;
-            max-height: 0;
-            overflow: hidden;
-            opacity: 0;
-            visibility: hidden;
-        }
-
-
-        .shell {
-            width: 100%;
-            padding: 48px 16px 56px;
-            background: #EFF6FF !important;
-        }
-
-
-        .card {
-            max-width: 580px;
-            margin: 0 auto;
+        html, body {
+            background-color: #FFFFFF !important;
             background: #FFFFFF !important;
-            border: 1px solid #BFDBFE !important;
-            border-radius: 24px;
-            overflow: hidden;
-            box-shadow:
-                0 1px 2px rgba(30, 74, 123, 0.04),
-                0 8px 24px rgba(37, 99, 235, 0.08),
-                0 32px 64px rgba(37, 99, 235, 0.06);
+            margin: 0 !important;
+            padding: 0 !important;
+            height: 100% !important;
+            width: 100% !important;
+            color-scheme: light !important;
         }
-
-
-        .hero {
-            background: linear-gradient(160deg, #4AADEF 0%, #2F94DE 100%) !important;
-            padding: 36px 40px 32px;
-            position: relative;
-            overflow: hidden;
+        * {
+            -ms-text-size-adjust: 100%;
+            -webkit-text-size-adjust: 100%;
         }
-
-
-        .hero::before {
-            content: "";
-            position: absolute;
-            top: -60px;
-            right: -60px;
-            width: 220px;
-            height: 220px;
-            border-radius: 50%;
-            border: 40px solid rgba(255,255,255,0.06);
-            pointer-events: none;
+        div[style*="margin: 16px 0"] {
+            margin: 0 !important;
         }
-
-        .hero::after {
-            content: "";
-            position: absolute;
-            bottom: -80px;
-            right: 60px;
-            width: 160px;
-            height: 160px;
-            border-radius: 50%;
-            border: 24px solid rgba(255,255,255,0.04);
-            pointer-events: none;
+        table, td {
+            mso-table-lspace: 0pt !important;
+            mso-table-rspace: 0pt !important;
         }
-
-        .brand-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 24px;
+        table {
+            border-spacing: 0 !important;
+            border-collapse: collapse !important;
+            table-layout: fixed !important;
+            margin: 0 auto !important;
         }
-
-        .brand-wordmark {
-            font-size: 13px;
-            font-weight: 600;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            color: rgba(255,255,255,0.70);
-        }
-
-        .brand-sep {
-            width: 1px;
-            height: 12px;
-            background: rgba(255,255,255,0.25);
-        }
-
-        .brand-tag {
-            font-size: 11px;
-            font-weight: 500;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: rgba(255,255,255,0.45);
-        }
-
-        .hero h1 {
-            font-size: 26px;
-            font-weight: 600;
-            line-height: 1.25;
-            letter-spacing: -0.02em;
-            color: #FFFFFF;
-            margin: 0 0 10px;
-            position: relative;
-        }
-
-        .hero p {
-            font-size: 14px;
-            line-height: 1.7;
-            color: rgba(255,255,255,0.72);
-            max-width: 400px;
-            font-weight: 300;
-            position: relative;
-        }
-
-
-        .body {
-            padding: 36px 40px 28px;
-        }
-
-        .body p {
-            font-size: 15px;
-            line-height: 1.75;
-            color: #2D5F8F !important;
-            margin: 0 0 16px;
-            font-weight: 400;
-        }
-
-        .eyebrow {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: #2F94DE;
-            margin-bottom: 20px;
-        }
-
-        .eyebrow::before {
-            content: "";
-            display: inline-block;
-            width: 16px;
-            height: 2px;
-            background: #2F94DE;
-            border-radius: 2px;
-        }
-
-
-        .otp-wrap {
-            background: #F8FBFF !important;
-            border: 1px solid #DBEAFE !important;
-            border-radius: 18px;
-            padding: 32px 28px 26px;
-            text-align: center;
-            margin: 8px 0 28px;
-        }
-
-        .otp-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #2F94DE;
-            margin-bottom: 6px;
-            letter-spacing: -0.01em;
-        }
-
-        .otp-subtitle {
-            font-size: 13px;
-            color: #93B8D8;
-            line-height: 1.6;
-            margin-bottom: 24px;
-            font-weight: 400;
-        }
-
-        .otp-label {
-            font-size: 10px;
-            font-weight: 600;
-            letter-spacing: 0.16em;
-            text-transform: uppercase;
-            color: #60A5FA;
-            margin-bottom: 12px;
-        }
-
-        .otp-code {
-            display: inline-block;
-            font-family: "DM Mono", "Courier New", monospace;
-            font-size: 46px;
-            font-weight: 500;
-            letter-spacing: 0.18em;
-            color: #2F94DE !important;
-            background: #FFFFFF !important;
-            border: 1.5px solid #BAE0FB !important;
-            border-radius: 14px;
-            padding: 18px 32px 18px 40px;
-            min-width: 280px;
-            line-height: 1;
-            box-shadow:
-                0 2px 6px rgba(47, 148, 222, 0.10),
-                inset 0 1px 0 rgba(255,255,255,0.9);
-        }
-
-        .otp-meta {
-            margin-top: 16px;
-            font-size: 12px;
-            font-weight: 500;
-            color: #93B8D8;
-            letter-spacing: 0.01em;
-        }
-
-        .otp-divider {
-            height: 1px;
-            background: #DBEAFE;
-            margin: 20px 0;
-        }
-
-        .otp-steps p {
-            margin: 0;
-            font-size: 13px;
-            line-height: 1.7;
-            color: #7BAFD4;
-            font-weight: 400;
-        }
-
-
-        .notice {
-            margin: 0 40px 28px;
-            background: #EFF6FF !important;
-            border: 1px solid #DBEAFE !important;
-            border-radius: 12px;
-            padding: 14px 18px;
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-        }
-
-        .notice-icon {
-            flex-shrink: 0;
-            margin-top: 1px;
-            width: 16px;
-            height: 16px;
-        }
-
-        .notice p {
-            margin: 0;
-            font-size: 13px;
-            line-height: 1.65;
-            color: #4A90C4;
-            font-weight: 400;
-        }
-
-
-        .footer {
-            padding: 0 40px 32px;
-        }
-
-        .footer-divider {
-            height: 1px;
-            background: #EFF6FF;
-            margin-bottom: 20px;
-        }
-
-        .footer p {
-            margin: 0;
-            font-size: 12px;
-            line-height: 1.7;
-            color: #93B8D8;
-            font-weight: 400;
-        }
-
-        .footer strong {
-            color: #2F94DE;
-            font-weight: 600;
-        }
-
-
-        @media only screen and (max-width: 560px) {
-            .shell { padding: 24px 12px 32px; }
-            .hero, .body, .footer { padding-left: 24px; padding-right: 24px; }
-            .notice { margin-left: 24px; margin-right: 24px; }
-            .hero h1 { font-size: 22px; }
-            .otp-wrap { padding: 24px 16px 20px; }
-            .otp-code {
-                min-width: 0;
-                width: 100%;
-                font-size: 34px;
-                padding: 16px 12px 16px 18px;
-                letter-spacing: 0.14em;
+        /* Strict Dark Mode Overrides for Mobile Apps */
+        @media (prefers-color-scheme: dark) {
+            body, table, td, div, p, a, span {
+                background-color: #FFFFFF !important;
+                background: #FFFFFF !important;
+                color: #1259D9 !important;
+            }
+            .hero-td {
+                background: #1A6FFF !important;
+                background-color: #1A6FFF !important;
+                color: #FFFFFF !important;
+            }
+            .hero-td h1, .hero-td p, .hero-td span {
+                color: #FFFFFF !important;
+            }
+            .otp-box {
+                background-color: #EEF3FF !important;
+                border: 1px solid #C2D6FF !important;
+            }
+            .otp-code-val {
+                background-color: #FFFFFF !important;
+                color: #1A6FFF !important;
+                border: 1.5px solid #C2D6FF !important;
+            }
+            .blue-text {
+                color: #1A6FFF !important;
             }
         }
+        /* Gmail & Samsung Mail Fixes */
+        [data-ogsc] body, [data-ogsc] table, [data-ogsc] td { background-color: #FFFFFF !important; }
+        [data-ogsb] body, [data-ogsb] table, [data-ogsb] td { background-color: #FFFFFF !important; }
+        [data-ogsc] .hero-td { background-color: #1A6FFF !important; }
+        [data-ogsc] .otp-code-val { background-color: #FFFFFF !important; color: #1A6FFF !important; }
     </style>
 </head>
-<body>
-    <div class="preheader">{{ preheader }}</div>
+<body bgcolor="#FFFFFF" style="background-color: #FFFFFF !important; background: #FFFFFF !important; margin: 0; padding: 0; width: 100%; -webkit-font-smoothing: antialiased;">
+    <div style="display: none; max-height: 0; overflow: hidden; opacity: 0;">{{ preheader }}</div>
 
-    <div class="shell">
-        <div class="card">
+    <!-- Outer Wrapper Table -->
+    <table border="0" cellpadding="0" cellspacing="0" width="100%" bgcolor="#FFFFFF" style="background-color: #FFFFFF !important; background: #FFFFFF !important; width: 100%; margin: 0; padding: 20px 0;">
+        <tr>
+            <td align="center" bgcolor="#FFFFFF" style="background-color: #FFFFFF !important; background: #FFFFFF !important; padding: 10px;">
+                
+                <!-- Main Card Table -->
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 540px; background-color: #FFFFFF !important; border: 1px solid #C2D6FF; border-radius: 20px; overflow: hidden; font-family: 'Segoe UI', Arial, sans-serif;">
+                    
+                    <!-- Hero Header (Primary Blue) -->
+                    <tr>
+                        <td class="hero-td" bgcolor="#1A6FFF" style="background-color: #1A6FFF !important; background: linear-gradient(160deg, #1A6FFF 0%, #1259D9 100%) !important; padding: 32px 32px 28px; color: #FFFFFF !important; text-align: left;">
+                            <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #FFFFFF !important; opacity: 0.75; margin-bottom: 16px;">
+                                CHEESEBALL &bull; SECURE MAIL
+                            </div>
+                            <h1 style="font-size: 24px; font-weight: 700; color: #FFFFFF !important; margin: 0; line-height: 1.2;">
+                                {{ headline }}
+                            </h1>
+                        </td>
+                    </tr>
 
+                    <!-- Body Content Area -->
+                    <tr>
+                        <td bgcolor="#FFFFFF" style="background-color: #FFFFFF !important; padding: 32px; color: #1259D9 !important; text-align: left; font-size: 15px; line-height: 1.6;">
+                            {% block content %}
+                            {% endblock %}
+                        </td>
+                    </tr>
 
-            <div class="hero">
-                <div class="brand-row">
-                    <span class="brand-wordmark">CheeseBall</span>
-                    <div class="brand-sep"></div>
-                    <span class="brand-tag">Secure Mail</span>
-                </div>
-                <h1>{{ headline }}</h1>
-                <p>{{ preheader }}</p>
-            </div>
+                    <!-- Footer Area -->
+                    <tr>
+                        <td bgcolor="#FFFFFF" style="background-color: #FFFFFF !important; padding: 0 32px 28px; text-align: left; font-size: 12px; color: #1259D9 !important; border-top: 1px solid #EEF3FF;">
+                            <p style="margin: 16px 0 0; color: #1259D9 !important;">
+                                <strong style="color: #1A6FFF !important;">CheeseBall</strong> &nbsp;&bull;&nbsp; {{ help_text }}
+                            </p>
+                        </td>
+                    </tr>
 
+                </table>
 
-            <div class="body">
-                {% block content %}
-
-                <span class="eyebrow">Verification Code</span>
-
-                <p class="intro-copy">
-                    Use the code below to complete your verification. It is valid for a limited time and should be entered exactly as shown.
-                </p>
-
-                <div class="otp-wrap">
-                    <div class="otp-head">
-                        <div class="otp-title">Your one-time passcode</div>
-                        <div class="otp-subtitle">Enter this code to continue. Do not share it with anyone.</div>
-                    </div>
-
-                    <div class="otp-label">Verification Code</div>
-                    <div class="otp-code">{{ otp_code }}</div>
-                    <div class="otp-meta">Expires in 10 minutes</div>
-
-                    <div class="otp-divider"></div>
-
-                    <div class="otp-steps">
-                        <p>Go back to the CheeseBall page and enter the code above to verify your identity.</p>
-                    </div>
-                </div>
-
-                {% endblock %}
-            </div>
-
-
-            <div class="notice">
-
-                <svg class="notice-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M8 1L2 3.5V7.5C2 11 4.8 14 8 15C11.2 14 14 11 14 7.5V3.5L8 1Z" stroke="#60A5FA" stroke-width="1.2" stroke-linejoin="round" fill="none"/>
-                    <path d="M5.5 8L7 9.5L10.5 6" stroke="#60A5FA" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <p>Never share this code with anyone. CheeseBall support will never ask for it.</p>
-            </div>
-
-
-            <div class="footer">
-                <div class="footer-divider"></div>
-                <p><strong>CheeseBall</strong>&nbsp;&nbsp;{{ help_text }}</p>
-            </div>
-
-        </div>
-    </div>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>

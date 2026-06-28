@@ -102,6 +102,8 @@ class Transaction(models.Model):
     paid_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     failed_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True, help_text="Auto-set to 24h after creation for pending_payment transactions. Null for pre-migration records.")
+    fail_reason = models.CharField(max_length=100, blank=True, help_text="Machine-readable reason for failure, e.g. 'expired'")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     finalized = models.BooleanField(default=False)

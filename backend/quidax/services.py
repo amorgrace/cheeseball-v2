@@ -605,12 +605,40 @@ def _try_advance_sell_transaction(deposit: QuidaxDeposit) -> None:
     from broker.services import transition_transaction
 
     transaction_obj = deposit.broker_transaction
-    if transaction_obj.status != Transaction.PENDING_PAYMENT:
+
+    # Happy path: transaction is still waiting for payment.
+    if transaction_obj.status == Transaction.PENDING_PAYMENT:
+        transition_transaction(transaction_obj, Transaction.PAID, note="Quidax deposit received")
+        transition_transaction(transaction_obj, Transaction.PROCESSING, note="Auto-processing Quidax external wallet sell")
+        transition_transaction(transaction_obj, Transaction.COMPLETED, note="Auto-completed Quidax external wallet sell")
         return
 
-    transition_transaction(transaction_obj, Transaction.PAID, note="Quidax deposit received")
-    transition_transaction(transaction_obj, Transaction.PROCESSING, note="Auto-processing Quidax external wallet sell")
-    transition_transaction(transaction_obj, Transaction.COMPLETED, note="Auto-completed Quidax external wallet sell")
+    # Late-arrival guard: crypto arrived AFTER the transaction was auto-expired.
+    # We must never ignore real money — re-open the transaction and process it.
+    if transaction_obj.status == Transaction.FAILED and transaction_obj.fail_reason == "expired":
+        logger.warning(
+            "Late Quidax deposit received for expired transaction %s. "
+            "Re-opening and completing the transaction.",
+            transaction_obj.id,
+        )
+        # Reset the transaction so transition_transaction accepts the new status.
+        transaction_obj.status = Transaction.PENDING_PAYMENT
+        transaction_obj.fail_reason = ""
+        transaction_obj.failed_at = None
+        transaction_obj.save(update_fields=["status", "fail_reason", "failed_at"])
+
+        transition_transaction(transaction_obj, Transaction.PAID, note="Late Quidax deposit received — transaction re-opened")
+        transition_transaction(transaction_obj, Transaction.PROCESSING, note="Auto-processing late Quidax external wallet sell")
+        transition_transaction(transaction_obj, Transaction.COMPLETED, note="Auto-completed late Quidax external wallet sell")
+        return
+
+    # Transaction is in any other terminal state (completed, rejected, etc.) — skip.
+    logger.info(
+        "Skipping deposit advance for transaction %s — current status: %s",
+        transaction_obj.id,
+        transaction_obj.status,
+    )
+
 
 
 def get_quidax_diagnostics() -> dict:

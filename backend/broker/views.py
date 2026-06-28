@@ -22,6 +22,10 @@ def create_sell_transaction(request, payload):
 
 
 def list_transactions(request):
+    # On-read expiry: fire the expiry check inline so stale pending_payment
+    # transactions are automatically marked failed without needing a cron job.
+    expire_stale_transactions()
+
     queryset = Transaction.objects.all() if request.auth.is_staff else Transaction.objects.filter(user=request.auth)
     return queryset.order_by("-created_at")
 

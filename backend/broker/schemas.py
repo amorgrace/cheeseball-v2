@@ -70,5 +70,8 @@ class TransactionSchema(Schema):
     reviewed_at: datetime | None = None
     paid_at: datetime | None = None
     completed_at: datetime | None = None
+    failed_at: datetime | None = None
+    expires_at: datetime | None = None
+    fail_reason: str = ""
     created_at: datetime
     updated_at: datetime

@@ -1,9 +1,11 @@
 import logging
+from datetime import timedelta
 from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction as db_transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from rates.models import Asset, RateQuote
@@ -67,7 +69,7 @@ def validate_buy_payment_method(asset: Asset, payment_method: str) -> None:
         )
 
 
-def transition_transaction(transaction: Transaction, status: str, *, admin_user=None, note: str = "", reason: str = "") -> Transaction:
+def transition_transaction(transaction: Transaction, status: str, *, admin_user=None, note: str = "", reason: str = "", fail_reason: str = "") -> Transaction:
     validate_transaction_transition(transaction, status)
     now = timezone.now()
     transaction.status = status
@@ -94,6 +96,9 @@ def transition_transaction(transaction: Transaction, status: str, *, admin_user=
     if status == Transaction.FAILED:
         transaction.failed_at = now
         update_fields.append("failed_at")
+        if fail_reason:
+            transaction.fail_reason = fail_reason
+            update_fields.append("fail_reason")
 
     transaction.save(update_fields=update_fields)
 
@@ -205,6 +210,7 @@ def build_buy_transaction(*, user, payload):
             crypto_usd_price=quote.crypto_usd_price,
             wallet_address=(payload.wallet_address or "").strip(),
             network=(payload.network or "").strip(),
+            expires_at=timezone.now() + timedelta(hours=24),
         )
 
         if payload.payment_method == Transaction.NGN_WALLET:
@@ -342,6 +348,7 @@ def build_sell_transaction(*, user, payload):
             bank_account_name=beneficiary.account_name if beneficiary else "",
             bank_account_number=beneficiary.account_number if beneficiary else "",
             bank_account_type=beneficiary.account_type if beneficiary else "",
+            expires_at=timezone.now() + timedelta(hours=24),
         )
 
         if crypto_source == Transaction.CRYPTO_SOURCE_EXTERNAL and quidax_wallet_address_obj:
@@ -508,22 +515,42 @@ def _finalize_transaction(transaction_obj: Transaction, admin_user=None):
         transaction_obj.save(update_fields=["finalized"])
 
 
-def expire_stale_transactions():
-    """Fail transactions that have been stuck in PENDING_PAYMENT for over 24 hours."""
-    from datetime import timedelta
-    cutoff = timezone.now() - timedelta(hours=24)
-    
-    stale_txns = Transaction.objects.filter(
-        status=Transaction.PENDING_PAYMENT,
-        created_at__lte=cutoff
+def expire_stale_transactions() -> int:
+    """
+    Mark PENDING_PAYMENT transactions as FAILED (reason: expired) when they have
+    crossed their 24-hour window.
+
+    Handles two cases:
+      1. New transactions  → have an explicit expires_at field; expire when that passes.
+      2. Legacy records    → created before the expires_at field was added (expires_at IS NULL);
+                             expire when created_at is more than 24 hours ago.
+
+    This function is called inline from the list_transactions view so that no cron
+    job or Celery worker is required — it fires naturally on every user request.
+    """
+    now = timezone.now()
+    cutoff = now - timedelta(hours=24)
+
+    stale_qs = Transaction.objects.filter(
+        status=Transaction.PENDING_PAYMENT
+    ).filter(
+        # Case 1: new transactions with an explicit expiry timestamp
+        Q(expires_at__isnull=False, expires_at__lt=now)
+        # Case 2: legacy records without an expiry — use created_at as the reference
+        | Q(expires_at__isnull=True, created_at__lt=cutoff)
     )
-    
+
     count = 0
-    for txn in stale_txns:
+    for txn in stale_qs:
         try:
-            transition_transaction(txn, Transaction.FAILED, reason="Expired after 24 hours of inactivity")
+            transition_transaction(
+                txn,
+                Transaction.FAILED,
+                reason="Transaction expired — crypto was not received within 24 hours.",
+                fail_reason="expired",
+            )
             count += 1
         except Exception:
             logger.exception("Failed to auto-expire transaction %s", txn.id)
-            
+
     return count

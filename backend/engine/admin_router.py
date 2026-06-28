@@ -717,7 +717,7 @@ async def quidax_overview(
     def _inner():
         from quidax.models import QuidaxDeposit, QuidaxWithdrawal, QuidaxWebhookEvent
 
-        dep_qs = QuidaxDeposit.objects.select_related("user").all()
+        dep_qs = QuidaxDeposit.objects.select_related("user").filter(status=QuidaxDeposit.SUCCESSFUL)
         dep_items, dep_meta = paginate_qs(dep_qs, page, page_size)
 
         wd_qs = QuidaxWithdrawal.objects.select_related("user").all()

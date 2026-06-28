@@ -145,12 +145,16 @@ def ensure_sub_account(user) -> QuidaxSubAccount:
 
 
 # Maps frontend network IDs → Quidax API network identifiers.
-# Quidax uses full lowercase names for multi-network assets.
+# Verified against Quidax docs: POST /wallets/{currency}/addresses/?network={network}
 NETWORK_ID_MAP = {
-    "sol":   "sol",      # Solana SPL tokens (Quidax uses "sol")
-    "bep20": "bep20",    # BNB Smart Chain
-    "trc20": "trc20",    # TRON network
-    "erc20": "erc20",    # Ethereum network
+    "sol":     "solana",   # Solana SPL — Quidax requires "solana", NOT "sol"
+    "solana":  "solana",   # allow both spellings from frontend
+    "bep20":   "bep20",    # BNB Smart Chain
+    "trc20":   "trc20",    # TRON network
+    "erc20":   "erc20",    # Ethereum network
+    "polygon": "polygon",  # Polygon (MATIC)
+    "ton":     "ton",      # TON network
+    "celo":    "celo",     # Celo network
 }
 
 

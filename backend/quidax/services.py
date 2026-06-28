@@ -146,7 +146,8 @@ def ensure_sub_account(user) -> QuidaxSubAccount:
 
 def ensure_wallet_address(user, *, currency: str, network: str = "") -> QuidaxWalletAddress:
     currency = currency.upper().strip()
-    network = (network or "").strip()
+    # Normalise to lowercase – Quidax expects e.g. "trc20", not "TRC20".
+    network = (network or "").strip().lower()
     existing = QuidaxWalletAddress.objects.filter(user=user, currency=currency, network=network).first()
     if existing and existing.status == QuidaxWalletAddress.GENERATED and existing.address:
         return existing

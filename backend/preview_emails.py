@@ -279,6 +279,33 @@ EMAIL_SCENARIOS = [
             "cta_url": "https://cheeseballapp.com/dashboard/history",
             "help_text": "Need help? Contact support@cheeseballapp.com",
         }
+    },
+    {
+        "id": 11,
+        "name": "Referral Reward Received",
+        "subject": "[CheeseBall] You earned a referral reward!",
+        "template": "emails/activity_notification.html",
+        "text_template": "emails/activity_notification.txt",
+        "context": {
+            "headline": "Referral Reward Earned",
+            "category": "Reward Alert",
+            "user_name": "Alex",
+            "notification_title": "Referral Reward Received",
+            "notification_message": "Great news! Your friend just completed their first trade on CheeseBall. As a thank-you, we've added a reward to your NGN wallet.",
+            "status_badge": "Earned",
+            "status_color": "#16A34A",
+            "pill_bg": "#F0FDF4",
+            "big_amount": "+\u20a61,000.00",
+            "details": {
+                "Reward Amount": "\u20a61,000.00 NGN",
+                "Credited To": "NGN Wallet",
+                "Reason": "Referee completed first trade",
+                "Date": "Jun 27, 2026 at 11:30 PM UTC",
+            },
+            "cta_text": "View Balance",
+            "cta_url": "https://cheeseballapp.com/dashboard/wallets",
+            "help_text": "Need help? Contact support@cheeseballapp.com",
+        }
     }
 ]
 

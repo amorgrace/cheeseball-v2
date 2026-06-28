@@ -114,6 +114,7 @@ class BalanceSummarySchema(Schema):
 class DepositCreateSchema(Schema):
     asset: str
     expected_amount: Decimal
+    network: str | None = None
 
 
 class DepositResponseSchema(Schema):

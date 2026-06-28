@@ -55,7 +55,9 @@ def create_deposit(request, payload: DepositCreateSchema):
         asset=asset,
         defaults={"network": asset.network}
     )
-    network = platform_account.network or asset.network or ""
+    # Prefer the network explicitly supplied by the client (e.g. "TRC20" for USDT);
+    # fall back to what is stored on the platform account / asset.
+    network = (payload.network or platform_account.network or asset.network or "").strip()
 
     # Generate (or retrieve cached) Quidax wallet address for this user
     import logging
@@ -485,21 +487,10 @@ def serialize_withdrawal(withdrawal):
 # Treasury sync + reconciliation
 # ---------------------------------------------------------------------------
 
-def _is_cron_authenticated(request) -> bool:
-    """Allow access if the request carries the server-side CRON_SECRET header."""
-    from django.conf import settings
-    secret = getattr(settings, "CRON_SECRET", "")
-    if not secret:
-        return False
-    return request.headers.get("X-Cron-Secret", "") == secret
-
-
 def sync_treasury(request):
     """
     Fetch Quidax master-wallet balances for all active assets and store a
-    TreasurySnapshot row for each.  Accepts either:
-      - A valid staff JWT (admin triggering it manually), or
-      - X-Cron-Secret header (GitHub Actions cron job).
+    TreasurySnapshot row for each. Requires staff JWT authentication.
     """
     import logging
     from decimal import Decimal, InvalidOperation
@@ -509,10 +500,8 @@ def sync_treasury(request):
 
     logger = logging.getLogger(__name__)
 
-    # Allow cron header auth as an alternative to JWT staff auth
-    if not _is_cron_authenticated(request):
-        from broker.services import ensure_admin
-        ensure_admin(request.auth)
+    from broker.services import ensure_admin
+    ensure_admin(request.auth)
 
     assets = Asset.objects.filter(is_active=True).exclude(code="NGN")
 

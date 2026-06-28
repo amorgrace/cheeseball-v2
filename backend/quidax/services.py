@@ -144,10 +144,22 @@ def ensure_sub_account(user) -> QuidaxSubAccount:
     return account
 
 
+# Maps frontend network IDs → Quidax API network identifiers.
+# Quidax uses full lowercase names for multi-network assets.
+NETWORK_ID_MAP = {
+    "sol":   "sol",      # Solana SPL tokens (Quidax uses "sol")
+    "bep20": "bep20",    # BNB Smart Chain
+    "trc20": "trc20",    # TRON network
+    "erc20": "erc20",    # Ethereum network
+}
+
+
 def ensure_wallet_address(user, *, currency: str, network: str = "") -> QuidaxWalletAddress:
     currency = currency.upper().strip()
-    # Normalise to lowercase – Quidax expects e.g. "trc20", not "TRC20".
-    network = (network or "").strip().lower()
+    # Normalise to lowercase then apply Quidax-specific network ID mapping.
+    # e.g. frontend sends "sol" → Quidax expects "sol"; "TRC20" → "trc20"
+    raw_network = (network or "").strip().lower()
+    network = NETWORK_ID_MAP.get(raw_network, raw_network)
     existing = QuidaxWalletAddress.objects.filter(user=user, currency=currency, network=network).first()
     if existing and existing.status == QuidaxWalletAddress.GENERATED and existing.address:
         return existing

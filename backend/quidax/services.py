@@ -155,8 +155,8 @@ def ensure_wallet_address(user, *, currency: str, network: str = "") -> QuidaxWa
     account = ensure_sub_account(user)
     response = _quidax_request(
         f"users/{account.quidax_id}/wallets/{currency.lower()}/addresses",
-        params=None,
-        data={"network": network} if network else {},
+        params={"network": network} if network else None,
+        data={},
         method="POST",
     )
     _check_quidax_response(response, "wallet address generation")

@@ -44,7 +44,7 @@ class Notification(models.Model):
     message = models.TextField()
     type = models.CharField(max_length=30, choices=TYPE_CHOICES, default=GENERAL)
     is_read = models.BooleanField(default=False)
-    reference_id = models.UUIDField(null=True, blank=True)
+    reference_id = models.CharField(max_length=128, null=True, blank=True)
     reference_type = models.CharField(max_length=50, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

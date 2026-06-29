@@ -160,9 +160,15 @@ def _send_notification_email(user, title: str, message: str, notification_type: 
     if extra_context:
         context.update(extra_context)
 
+    text_template_name = "emails/activity_notification.txt"
+    if extra_context and "template_name" in extra_context:
+        template_name = extra_context["template_name"]
+    if extra_context and "text_template_name" in extra_context:
+        text_template_name = extra_context["text_template_name"]
+
     try:
         html_body = render_to_string(template_name, context)
-        text_body = render_to_string("emails/activity_notification.txt", context)
+        text_body = render_to_string(text_template_name, context)
 
         msg = EmailMultiAlternatives(
             subject=f"[CheeseBall] {title}",

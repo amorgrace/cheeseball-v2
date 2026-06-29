@@ -1,0 +1,23 @@
+Hello {% firstof user_name "Valued Customer" %},
+
+Sell Crypto — Transaction {{ status_title|default:"Failed" }}
+Attempted {{ asset_code }} · {{ formatted_date }}
+
+Your transaction to sell {{ crypto_amount }} {{ asset_code }} could not be completed.
+Reason: {{ reason|default:"Transaction failed" }}
+
+No funds were credited to your NGN Wallet. If this transaction was funded from your CheeseBall wallet, any locked crypto has been released back to your available balance.
+
+Transaction Details:
+- Reference: {{ reference }}
+- Asset: {{ asset_code }}
+- Amount: {{ crypto_amount }} {{ asset_code }}{% if usd_value %} (${{ usd_value }}){% endif %}
+- Reason: {{ reason|default:"Transaction failed" }}
+- Date & time: {{ formatted_date }}
+- Net payout: ₦0.00
+
+Try Again: {{ cta_url|default:"https://cheeseballapp.com/dashboard/sell" }}
+
+This is an automated message — please do not reply to this email.
+
+CheeseBall Team

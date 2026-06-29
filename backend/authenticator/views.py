@@ -269,6 +269,32 @@ async def login_user(request, payload: LoginSchema):
         return Response({"detail": "Invalid credentials"}, status=401)
 
     access = await sync_to_async(AccessToken.for_user)(user)
+
+    # Security alert email — fire and forget
+    try:
+        from notifications.services import notify
+        from notifications.models import Notification
+        _ua = request.headers.get("User-Agent", "Unknown device")[:120]
+        _device = _ua if _ua != "Unknown device" else "Unknown device"
+        _fdate = timezone.localtime(timezone.now()).strftime("%m/%d/%Y, %I:%M %p")
+        await sync_to_async(notify)(
+            user,
+            title="New Login Detected",
+            message=f"A new login was detected on your Cheeseball account from: {_device}",
+            notification_type=Notification.GENERAL,
+            extra_context={
+                "template_name": "emails/security_alert.html",
+                "text_template_name": "emails/security_alert.txt",
+                "alert_type": "New Login Detected",
+                "device": _device,
+                "formatted_date": _fdate,
+                "secure_url": "https://cheeseballapp.com/auth/reset-password",
+                "cta_url": "https://cheeseballapp.com/dashboard",
+            },
+        )
+    except Exception:
+        pass
+
     return auth_success_response(
         message="Login successful",
         access_token=str(access),
@@ -330,6 +356,25 @@ async def verify_user_token(payload: VerifyTokenSchema):
 
     # Send KYC prompt email now that the account is active
     await sync_to_async(send_kyc_prompt_email)(user)
+
+    # Send welcome email
+    try:
+        from notifications.services import notify
+        from notifications.models import Notification
+        await sync_to_async(notify)(
+            user,
+            title="Welcome to Cheeseball!",
+            message="Your account is now active. Start buying, selling, and transferring crypto today.",
+            notification_type=Notification.GENERAL,
+            extra_context={
+                "template_name": "emails/welcome.html",
+                "text_template_name": "emails/welcome.txt",
+                "user_name": user.first_name or user.fullname or "",
+                "cta_url": "https://cheeseballapp.com/dashboard",
+            },
+        )
+    except Exception:
+        logger.exception("Welcome email failed for %s", user.email)
 
     access = await sync_to_async(AccessToken.for_user)(user)
     return auth_success_response(

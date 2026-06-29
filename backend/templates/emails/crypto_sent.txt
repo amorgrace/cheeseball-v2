@@ -1,0 +1,21 @@
+Hello {% firstof user_name "Valued Customer" %},
+
+Crypto Sent — {{ asset_code }}
+{{ formatted_date }}
+
+You successfully sent {{ amount }} {{ asset_code }} to {{ recipient }}.
+
+Transfer Details:
+- Asset: {{ asset_code }}
+- Amount sent: {{ amount }} {{ asset_code }}
+- To: {{ recipient }}
+- Type: {{ transfer_type|default:"Internal transfer" }}
+- Date & time: {{ formatted_date }}
+
+View Transfer: {{ cta_url|default:"https://cheeseballapp.com/dashboard/transfers" }}
+
+If you did not initiate this transfer, please contact our support team immediately.
+
+This is an automated message — please do not reply to this email.
+
+CheeseBall Team

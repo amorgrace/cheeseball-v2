@@ -1,0 +1,21 @@
+Hello {% firstof user_name "Valued Customer" %},
+
+⚠️ Security Alert — {{ alert_type|default:"New Login Detected" }}
+
+We detected a new sign-in to your Cheeseball account.
+
+Login Details:{% if device %}
+- Device / Browser: {{ device }}{% endif %}{% if location %}
+- Location (approx.): {{ location }}{% endif %}
+- Date & time: {{ formatted_date }}
+
+If this was you: No action needed. You can safely ignore this email.
+
+If this was NOT you: Reset your password immediately to secure your account:
+{{ secure_url|default:"https://cheeseballapp.com/auth/reset-password" }}
+
+Contact Support: https://cheeseballapp.com/dashboard/support
+
+This is an automated message — please do not reply to this email.
+
+CheeseBall Team

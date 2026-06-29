@@ -36,8 +36,13 @@ def submit_kyc(*, user, payload):
         notify(
             user,
             title="Verification Under Review",
-            message="Your identity documents have been successfully submitted and are currently under review. This process usually takes 24–48 hours.",
+            message="Your identity documents have been successfully submitted and are currently under review. This process usually takes 24\u201348 hours.",
             notification_type="KYC_SUBMITTED",
+            extra_context={
+                "template_name": "emails/kyc_submitted.html",
+                "text_template_name": "emails/kyc_submitted.txt",
+                "cta_url": "https://cheeseballapp.com/dashboard/kyc",
+            },
         )
     except Exception:
         pass

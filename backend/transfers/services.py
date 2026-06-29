@@ -389,11 +389,15 @@ def admin_reject_transfer(transfer: CryptoTransfer, admin_user, reason: str = ""
 def _notify_transfer(transfer: CryptoTransfer):
     from notifications.services import notify
     from notifications.models import Notification
+    from django.utils import timezone as _tz
 
     amount = transfer.amount
     code = transfer.asset_id
+    _local_dt = _tz.localtime(transfer.completed_at or _tz.now())
+    _fdate = _local_dt.strftime("%m/%d/%Y, %I:%M %p")
 
     if transfer.transfer_type == CryptoTransfer.INTERNAL:
+        _type_label = "Internal transfer"
         # Notify sender
         notify(
             transfer.sender,
@@ -402,6 +406,16 @@ def _notify_transfer(transfer: CryptoTransfer):
             notification_type=Notification.CRYPTO_SENT,
             reference_id=transfer.id,
             reference_type="CryptoTransfer",
+            extra_context={
+                "template_name": "emails/crypto_sent.html",
+                "text_template_name": "emails/crypto_sent.txt",
+                "amount": str(amount),
+                "asset_code": code,
+                "recipient": transfer.recipient.email,
+                "transfer_type": _type_label,
+                "formatted_date": _fdate,
+                "cta_url": "https://cheeseballapp.com/dashboard/transfers",
+            },
         )
         # Notify recipient
         if transfer.recipient:
@@ -412,6 +426,15 @@ def _notify_transfer(transfer: CryptoTransfer):
                 notification_type=Notification.CRYPTO_RECEIVED,
                 reference_id=transfer.id,
                 reference_type="CryptoTransfer",
+                extra_context={
+                    "template_name": "emails/crypto_received.html",
+                    "text_template_name": "emails/crypto_received.txt",
+                    "amount": str(amount),
+                    "asset_code": code,
+                    "sender": transfer.sender.email,
+                    "formatted_date": _fdate,
+                    "cta_url": "https://cheeseballapp.com/dashboard/wallets",
+                },
             )
     else:
         notify(
@@ -421,6 +444,16 @@ def _notify_transfer(transfer: CryptoTransfer):
             notification_type=Notification.CRYPTO_SENT,
             reference_id=transfer.id,
             reference_type="CryptoTransfer",
+            extra_context={
+                "template_name": "emails/crypto_sent.html",
+                "text_template_name": "emails/crypto_sent.txt",
+                "amount": str(amount),
+                "asset_code": code,
+                "recipient": transfer.recipient_address,
+                "transfer_type": "External transfer",
+                "formatted_date": _fdate,
+                "cta_url": "https://cheeseballapp.com/dashboard/transfers",
+            },
         )
 
 

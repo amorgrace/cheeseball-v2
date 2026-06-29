@@ -1,0 +1,19 @@
+Hello {% firstof user_name "there" %},
+
+Welcome to Cheeseball! 🧀
+
+Your account is now active and ready. Start your crypto journey today.
+
+What you can do on Cheeseball:
+- Buy Crypto: Purchase BTC, ETH, USDT and more instantly.
+- Sell Crypto: Convert your crypto to Naira at competitive rates.
+- Send & Receive: Transfer crypto to anyone inside or outside Cheeseball.
+
+💡 Tip: Complete your identity verification (KYC) to unlock higher trading limits and unrestricted withdrawals: https://cheeseballapp.com/dashboard/kyc
+
+Explore Dashboard: {{ cta_url|default:"https://cheeseballapp.com/dashboard" }}
+Start your first trade: https://cheeseballapp.com/dashboard/buy
+
+This is an automated message — please do not reply to this email.
+
+CheeseBall Team

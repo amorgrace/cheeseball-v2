@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Withdrawal Rejected</title>
+<!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+<style>
+  body,table,td,p,a,li,blockquote{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
+  table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;}
+  img{-ms-interpolation-mode:bicubic;border:0;outline:none;text-decoration:none;}
+  body{margin:0;padding:0;width:100%!important;}
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
+  body,.body-bg{background-color:#F7F9FF;}
+  .sora{font-family:'Sora',Helvetica,Arial,sans-serif;}
+  .dmsans{font-family:'DM Sans',Helvetica,Arial,sans-serif;}
+  a{color:#1A6FFF;text-decoration:none;}
+  .cta-btn:hover{background-color:#1259D9!important;}
+  @media only screen and (max-width:600px){.email-container{width:100%!important;}.fluid-padding{padding-left:20px!important;padding-right:20px!important;}.amount-text{font-size:36px!important;}}
+</style>
+</head>
+<body class="body-bg dmsans" style="margin:0;padding:0;background-color:#F7F9FF;">
+  <div style="display:none;max-height:0px;overflow:hidden;opacity:0;mso-hide:all;">Your withdrawal of {{ amount }} {{ asset_code }} was rejected. Reason: {{ reason|default:"No reason provided." }}</div>
+  <div style="display:none;max-height:0px;overflow:hidden;opacity:0;">&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F7F9FF;">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="email-container" style="width:600px;max-width:600px;">
+
+          <tr>
+            <td align="center" style="padding-bottom:28px;">
+              <span class="sora" style="font-size:20px;font-weight:800;color:#0A0F1E;letter-spacing:-0.5px;">Cheese<span style="color:#1A6FFF;">ball</span></span>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="background-color:#FFFFFF;border:1px solid #E8EEFF;border-radius:24px;overflow:hidden;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="background-image:linear-gradient(135deg,#EF4444 0%,#DC2626 100%);padding:44px 32px 38px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td align="center" style="width:64px;height:64px;background-color:rgba(255,255,255,0.16);border-radius:50%;padding:14px;">
+                          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:36px;height:36px;background-color:#FFFFFF;border-radius:50%;">
+                            <tr><td align="center" valign="middle" style="width:36px;height:36px;"><img src="https://img.icons8.com/fluency-systems-filled/48/EF4444/cancel.png" width="18" height="18" alt="✕" style="display:block;"></td></tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;">
+                      <tr><td align="center" class="dmsans" style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:1.4px;padding-bottom:10px;">Withdrawal Rejected · {{ asset_code }}</td></tr>
+                      <tr><td align="center" class="dmsans" style="font-size:14px;color:rgba(255,255,255,0.55);padding-bottom:24px;">{{ formatted_date }}</td></tr>
+                    </table>
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr><td align="center" class="sora amount-text" style="font-size:46px;font-weight:700;color:#FFFFFF;letter-spacing:-1.5px;line-height:1;">{{ amount }} {{ asset_code }}</td></tr>
+                      <tr><td align="center" class="dmsans" style="font-size:13px;color:rgba(255,255,255,0.6);padding-top:10px;">Withdrawal not processed — funds returned</td></tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="fluid-padding" style="padding:32px 40px 8px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="background-color:#FEF2F2;border:1px solid #FCA5A5;border-radius:20px;padding:6px 14px;">
+                          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td style="width:7px;height:7px;background-color:#EF4444;border-radius:50%;font-size:0;line-height:0;">&nbsp;</td>
+                              <td style="width:6px;font-size:0;">&nbsp;</td>
+                              <td class="dmsans" style="font-size:11px;font-weight:700;color:#B91C1C;text-transform:uppercase;letter-spacing:0.5px;">Rejected</td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="fluid-padding" style="padding:24px 40px 12px;">
+                    <span class="dmsans" style="font-size:11px;font-weight:700;color:#A8B4CC;text-transform:uppercase;letter-spacing:0.8px;">Withdrawal Details</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="fluid-padding" style="padding:0 40px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F7F9FF;border:1px solid #E8EEFF;border-radius:16px;">
+                      <tr>
+                        <td style="padding:16px 20px 0;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td class="dmsans" style="font-size:13px;color:#6B7A99;">Asset</td>
+                              <td align="right" class="sora" style="font-size:13px;font-weight:700;color:#0A0F1E;">{{ asset_code }}</td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      <tr><td style="padding:10px 20px 0;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid #E8EEFF;font-size:0;line-height:0;">&nbsp;</td></tr></table></td></tr>
+                      <tr>
+                        <td style="padding:12px 20px 0;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td class="dmsans" style="font-size:13px;color:#6B7A99;">Amount</td>
+                              <td align="right" class="sora" style="font-size:13px;font-weight:700;color:#0A0F1E;">{{ amount }} {{ asset_code }}</td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      <tr><td style="padding:10px 20px 0;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid #E8EEFF;font-size:0;line-height:0;">&nbsp;</td></tr></table></td></tr>
+                      <tr>
+                        <td style="padding:12px 20px 0;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td class="dmsans" style="font-size:13px;color:#6B7A99;">Reason</td>
+                              <td align="right" class="sora" style="font-size:13px;font-weight:700;color:#EF4444;">{{ reason|default:"No reason provided." }}</td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      <tr><td style="padding:10px 20px 0;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid #E8EEFF;font-size:0;line-height:0;">&nbsp;</td></tr></table></td></tr>
+                      <tr>
+                        <td style="padding:14px 20px 16px;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td class="dmsans" style="font-size:13px;font-weight:600;color:#0A0F1E;">Date &amp; time</td>
+                              <td align="right" class="sora" style="font-size:13px;font-weight:700;color:#0A0F1E;">{{ formatted_date }}</td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td class="fluid-padding" align="center" style="padding:28px 40px 8px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <tr>
+                        <td align="center" bgcolor="#1A6FFF" class="cta-btn" style="border-radius:14px;">
+                          <a href="{{ cta_url|default:'https://cheeseballapp.com/dashboard/wallets' }}" target="_blank" class="sora" style="display:block;padding:16px 32px;font-size:15px;font-weight:700;color:#FFFFFF;text-decoration:none;letter-spacing:0.2px;">Try Again&nbsp;&nbsp;→</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding:14px 40px 36px;">
+                    <a href="https://cheeseballapp.com/dashboard/support" class="dmsans" style="font-size:13px;font-weight:600;color:#1A6FFF;">Contact support →</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:20px 8px 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#EEF3FF;border-radius:16px;">
+                <tr>
+                  <td style="padding:16px 24px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td width="24" valign="top" style="padding-top:1px;"><img src="https://img.icons8.com/fluency-systems-regular/48/1A6FFF/info--v1.png" width="16" height="16" alt="i" style="display:block;"></td>
+                        <td class="dmsans" style="font-size:12.5px;color:#3B5AA8;line-height:1.6;padding-left:6px;">Your funds have been returned to your wallet. If you believe this was an error, please contact our support team.</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr><td align="center" style="padding:32px 24px 8px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding-right:6px;vertical-align:middle;"><img src="https://img.icons8.com/fluency-systems-filled/48/4ADE80/security-shield--v1.png" width="13" height="13" alt="" style="display:block;"></td><td class="dmsans" style="font-size:12px;color:#6B7A99;vertical-align:middle;">Your wallet is secure · <span style="color:#4ADE80;font-weight:600;">Protected by Cheeseball</span></td></tr></table></td></tr>
+          <tr><td align="center" style="padding:4px 24px 12px;"><span class="dmsans" style="font-size:12px;color:#A8B4CC;">Need help? <a href="https://cheeseballapp.com/dashboard/support" style="color:#1A6FFF;font-weight:600;">Contact support</a></span></td></tr>
+          <tr><td align="center" style="padding:12px 24px 40px;"><span class="dmsans" style="font-size:11px;color:#A8B4CC;text-align:center;line-height:1.7;">© 2026 Cheeseball. All rights reserved.<br>This is an automated message — please do not reply.</span></td></tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

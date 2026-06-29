@@ -242,6 +242,10 @@ def complete_withdrawal(withdrawal: Withdrawal, admin_user=None):
         try:
             from notifications.services import notify
             from notifications.models import Notification
+            from django.utils import timezone as _tz
+            _local_dt = _tz.localtime(withdrawal.completed_at or _tz.now())
+            _fdate = _local_dt.strftime("%m/%d/%Y, %I:%M %p")
+            _dest = withdrawal.wallet_address or withdrawal.bank_account_number or ""
             notify(
                 withdrawal.user,
                 title="Withdrawal Processed",
@@ -249,6 +253,16 @@ def complete_withdrawal(withdrawal: Withdrawal, admin_user=None):
                 notification_type=Notification.WITHDRAWAL_APPROVED,
                 reference_id=withdrawal.id,
                 reference_type="Withdrawal",
+                extra_context={
+                    "template_name": "emails/withdrawal_approved.html",
+                    "text_template_name": "emails/withdrawal_approved.txt",
+                    "amount": str(withdrawal.amount),
+                    "asset_code": withdrawal.asset.code,
+                    "withdrawal_type": "Crypto",
+                    "destination": _dest,
+                    "formatted_date": _fdate,
+                    "cta_url": "https://cheeseballapp.com/dashboard/wallets",
+                },
             )
         except Exception:
             pass
@@ -278,17 +292,35 @@ def deposit_to_wallet(user, asset: Asset, amount, notes=""):
     # --- Notify user ---
     from notifications.models import Notification
     from notifications.services import notify
+    from django.utils import timezone as _tz
 
     if asset.code == NGN_CODE:
-        formatted = f"₦{amount:,.2f}"
+        formatted = f"\u20a6{amount:,.2f}"
     else:
         formatted = f"{amount} {asset.code}"
+
+    _local_dt = _tz.localtime(_tz.now())
+    _fdate = _local_dt.strftime("%m/%d/%Y, %I:%M %p")
+    _new_balance = wallet.balance
+    if asset.code == NGN_CODE:
+        _balance_str = f"\u20a6{_new_balance:,.2f}"
+    else:
+        _balance_str = f"{_new_balance} {asset.code}"
 
     notify(
         user,
         title="Deposit Received",
         message=f"{formatted} has been credited to your {asset.code} wallet.",
         notification_type=Notification.DEPOSIT_RECEIVED,
+        extra_context={
+            "template_name": "emails/deposit_received.html",
+            "text_template_name": "emails/deposit_received.txt",
+            "formatted_amount": formatted,
+            "asset_code": asset.code,
+            "formatted_date": _fdate,
+            "new_balance": _balance_str,
+            "cta_url": "https://cheeseballapp.com/dashboard/wallets",
+        },
     )
 
     return wallet

@@ -1,121 +1,88 @@
 <!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="color-scheme" content="light">
-    <meta name="supported-color-schemes" content="light">
-    <title>{{ headline }}</title>
-    <style>
-        :root {
-            color-scheme: light !important;
-            supported-color-schemes: light !important;
-        }
-        html, body {
-            background-color: #FFFFFF !important;
-            background: #FFFFFF !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            height: 100% !important;
-            width: 100% !important;
-            color-scheme: light !important;
-        }
-        * {
-            -ms-text-size-adjust: 100%;
-            -webkit-text-size-adjust: 100%;
-        }
-        div[style*="margin: 16px 0"] {
-            margin: 0 !important;
-        }
-        table, td {
-            mso-table-lspace: 0pt !important;
-            mso-table-rspace: 0pt !important;
-        }
-        table {
-            border-spacing: 0 !important;
-            border-collapse: collapse !important;
-            table-layout: fixed !important;
-            margin: 0 auto !important;
-        }
-        /* Strict Dark Mode Overrides for Mobile Apps */
-        @media (prefers-color-scheme: dark) {
-            body, table, td, div, p, a, span {
-                background-color: #FFFFFF !important;
-                background: #FFFFFF !important;
-                color: #1259D9 !important;
-            }
-            .hero-td {
-                background: #1A6FFF !important;
-                background-color: #1A6FFF !important;
-                color: #FFFFFF !important;
-            }
-            .hero-td h1, .hero-td p, .hero-td span {
-                color: #FFFFFF !important;
-            }
-            .otp-box {
-                background-color: #EEF3FF !important;
-                border: 1px solid #C2D6FF !important;
-            }
-            .otp-code-val {
-                background-color: #FFFFFF !important;
-                color: #1A6FFF !important;
-                border: 1.5px solid #C2D6FF !important;
-            }
-            .blue-text {
-                color: #1A6FFF !important;
-            }
-        }
-        /* Gmail & Samsung Mail Fixes */
-        [data-ogsc] body, [data-ogsc] table, [data-ogsc] td { background-color: #FFFFFF !important; }
-        [data-ogsb] body, [data-ogsb] table, [data-ogsb] td { background-color: #FFFFFF !important; }
-        [data-ogsc] .hero-td { background-color: #1A6FFF !important; }
-        [data-ogsc] .otp-code-val { background-color: #FFFFFF !important; color: #1A6FFF !important; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>{{ headline|default:"Account Update" }}</title>
+<!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+<style>
+  body,table,td,p,a,li,blockquote{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
+  table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;}
+  img{-ms-interpolation-mode:bicubic;border:0;outline:none;text-decoration:none;}
+  body{margin:0;padding:0;width:100%!important;}
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
+  body,.body-bg{background-color:#F7F9FF;}
+  .sora{font-family:'Sora',Helvetica,Arial,sans-serif;}
+  .dmsans{font-family:'DM Sans',Helvetica,Arial,sans-serif;}
+  a{color:#1A6FFF;text-decoration:none;}
+  .cta-btn:hover{background-color:#1259D9!important;}
+  @media only screen and (max-width:600px){
+    .email-container{width:100%!important;}
+    .fluid-padding{padding-left:20px!important;padding-right:20px!important;}
+  }
+</style>
 </head>
-<body bgcolor="#FFFFFF" style="background-color: #FFFFFF !important; background: #FFFFFF !important; margin: 0; padding: 0; width: 100%; -webkit-font-smoothing: antialiased;">
-    <div style="display: none; max-height: 0; overflow: hidden; opacity: 0;">{{ preheader }}</div>
+<body class="body-bg dmsans" style="margin:0;padding:0;background-color:#F7F9FF;">
+  <div style="display:none;max-height:0px;overflow:hidden;opacity:0;mso-hide:all;">{% firstof preheader notification_message "Account update from Cheeseball" %}</div>
+  <div style="display:none;max-height:0px;overflow:hidden;opacity:0;">&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
 
-    <!-- Outer Wrapper Table -->
-    <table border="0" cellpadding="0" cellspacing="0" width="100%" bgcolor="#FFFFFF" style="background-color: #FFFFFF !important; background: #FFFFFF !important; width: 100%; margin: 0; padding: 20px 0;">
-        <tr>
-            <td align="center" bgcolor="#FFFFFF" style="background-color: #FFFFFF !important; background: #FFFFFF !important; padding: 10px;">
-                
-                <!-- Main Card Table -->
-                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 540px; background-color: #FFFFFF !important; border: 1px solid #C2D6FF; border-radius: 20px; overflow: hidden; font-family: 'Segoe UI', Arial, sans-serif;">
-                    
-                    <!-- Hero Header (Primary Blue) -->
-                    <tr>
-                        <td class="hero-td" bgcolor="#1A6FFF" style="background-color: #1A6FFF !important; background: linear-gradient(160deg, #1A6FFF 0%, #1259D9 100%) !important; padding: 32px 32px 28px; color: #FFFFFF !important; text-align: left;">
-                            <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #FFFFFF !important; opacity: 0.75; margin-bottom: 16px;">
-                                CHEESEBALL &bull; SECURE MAIL
-                            </div>
-                            <h1 style="font-size: 24px; font-weight: 700; color: #FFFFFF !important; margin: 0; line-height: 1.2;">
-                                {{ headline }}
-                            </h1>
-                        </td>
-                    </tr>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F7F9FF;">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="email-container" style="width:600px;max-width:600px;">
 
-                    <!-- Body Content Area -->
-                    <tr>
-                        <td bgcolor="#FFFFFF" style="background-color: #FFFFFF !important; padding: 32px; color: #1259D9 !important; text-align: left; font-size: 15px; line-height: 1.6;">
-                            {% block content %}
-                            {% endblock %}
-                        </td>
-                    </tr>
-
-                    <!-- Footer Area -->
-                    <tr>
-                        <td bgcolor="#FFFFFF" style="background-color: #FFFFFF !important; padding: 0 32px 28px; text-align: left; font-size: 12px; color: #1259D9 !important; border-top: 1px solid #EEF3FF;">
-                            <p style="margin: 16px 0 0; color: #1259D9 !important;">
-                                <strong style="color: #1A6FFF !important;">CheeseBall</strong> &nbsp;&bull;&nbsp; {{ help_text }}
-                            </p>
-                        </td>
-                    </tr>
-
-                </table>
-
+          <!-- LOGO -->
+          <tr>
+            <td align="center" style="padding-bottom:28px;">
+              <span class="sora" style="font-size:20px;font-weight:800;color:#0A0F1E;letter-spacing:-0.5px;">Cheese<span style="color:#1A6FFF;">ball</span></span>
             </td>
-        </tr>
-    </table>
+          </tr>
+
+          <!-- MAIN CARD -->
+          <tr>
+            <td style="background-color:#FFFFFF;border:1px solid #E8EEFF;border-radius:24px;overflow:hidden;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="fluid-padding" style="padding:40px;">
+                    {% block content %}
+                    {% endblock %}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td align="center" style="padding:32px 24px 8px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding-right:6px;vertical-align:middle;">
+                    <img src="https://img.icons8.com/fluency-systems-filled/48/4ADE80/security-shield--v1.png" width="13" height="13" alt="" style="display:block;">
+                  </td>
+                  <td class="dmsans" style="font-size:12px;color:#6B7A99;vertical-align:middle;">
+                    Your account is secure · <span style="color:#4ADE80;font-weight:600;">Protected by Cheeseball</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:4px 24px 12px;">
+              <span class="dmsans" style="font-size:12px;color:#A8B4CC;">Need help? <a href="https://cheeseballapp.com/dashboard/support" style="color:#1A6FFF;font-weight:600;">Contact support</a></span>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:12px 24px 40px;">
+              <span class="dmsans" style="font-size:11px;color:#A8B4CC;text-align:center;line-height:1.7;">
+                © 2026 Cheeseball. All rights reserved.<br>This is an automated message — please do not reply.
+              </span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>

@@ -1,0 +1,18 @@
+Hello {% firstof user_name "Valued Customer" %},
+
+Crypto Received — {{ asset_code }}
+{{ formatted_date }}
+
+Great news! You received {{ amount }} {{ asset_code }} from {{ sender }}.
+
+Transfer Details:
+- Asset: {{ asset_code }}
+- Amount received: {{ amount }} {{ asset_code }}
+- From: {{ sender }}
+- Date & time: {{ formatted_date }}
+
+View Wallet: {{ cta_url|default:"https://cheeseballapp.com/dashboard/wallets" }}
+
+This is an automated message — please do not reply to this email.
+
+CheeseBall Team

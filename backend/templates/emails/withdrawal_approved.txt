@@ -1,0 +1,21 @@
+Hello {% firstof user_name "Valued Customer" %},
+
+Withdrawal Approved — {{ asset_code }}
+{{ formatted_date }}
+
+Your withdrawal of {{ amount }} {{ asset_code }} has been approved and is now being processed.
+
+Withdrawal Details:
+- Asset: {{ asset_code }}
+- Amount: {{ amount }} {{ asset_code }}{% if destination %}
+- Destination: {{ destination }}{% endif %}
+- Date & time: {{ formatted_date }}
+- Status: Processing
+
+View Wallet: {{ cta_url|default:"https://cheeseballapp.com/dashboard/wallets" }}
+
+Bank transfers may take 1–3 business days. Crypto withdrawals are typically processed within a few hours.
+
+This is an automated message — please do not reply to this email.
+
+CheeseBall Team

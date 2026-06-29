@@ -1,0 +1,21 @@
+Hello {% firstof user_name "Valued Customer" %},
+
+Sell Crypto — Transaction Confirmed
+Sold {{ asset_code }} · {{ formatted_date }}
+
+You sold {{ crypto_amount }} {{ asset_code }} and received ₦{{ naira_amount }} — transaction completed successfully.
+The funds have been credited to your NGN Wallet.
+
+Transaction Details:
+- Reference: {{ reference }}
+- Asset sold: {{ asset_code }}
+- Amount sold: {{ crypto_amount }} {{ asset_code }}{% if usd_value %} (${{ usd_value }}){% endif %}
+- Payout method: {{ payout_method|default:"NGN Wallet" }}
+- Date & time: {{ formatted_date }}
+- Net payout: +₦{{ naira_amount }}
+
+View Transaction: {{ cta_url|default:"https://cheeseballapp.com/dashboard/history" }}
+
+This is an automated message — please do not reply to this email.
+
+CheeseBall Team

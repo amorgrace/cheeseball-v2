@@ -1,0 +1,24 @@
+Hello {% firstof user_name "Valued Customer" %},
+
+Buy Crypto — Transaction {{ status_title|default:"Failed" }}
+Attempted {{ asset_code }} · {{ formatted_date }}
+
+Your order to buy {{ crypto_amount }} {{ asset_code }} could not be completed.
+Reason: {{ reason|default:"Transaction failed" }}
+
+No crypto was credited to your wallet. If any funds were debited from your NGN wallet or payment method, they have been fully refunded or reversed back to your balance.
+
+Transaction Details:
+- Reference: {{ reference }}
+- Asset: {{ asset_code }}
+- Amount: {{ crypto_amount }} {{ asset_code }}{% if usd_value %} (${{ usd_value }}){% endif %}
+- Payment method: {{ payment_method|default:"NGN Wallet" }}
+- Reason: {{ reason|default:"Transaction failed" }}
+- Date & time: {{ formatted_date }}
+- Total paid: ₦0.00
+
+Try Again: {{ cta_url|default:"https://cheeseballapp.com/dashboard/buy" }}
+
+This is an automated message — please do not reply to this email.
+
+CheeseBall Team

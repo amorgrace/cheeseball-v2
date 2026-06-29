@@ -1,0 +1,21 @@
+Hello {% firstof user_name "Valued Customer" %},
+
+🎉 Referral Reward Earned!
+
+Congratulations! Your friend {{ referee_email }} just completed their first trade on Cheeseball.
+
+As a thank you, we've credited {{ reward_amount }} directly to your NGN wallet.
+
+Reward Details:
+- Referee: {{ referee_email }}
+- Reward credited: {{ reward_amount }}
+- Wallet: NGN Wallet
+
+Keep sharing your referral link to earn more rewards!
+
+Share Your Link: {{ cta_url|default:"https://cheeseballapp.com/dashboard/referrals" }}
+View Wallet: https://cheeseballapp.com/dashboard/wallets
+
+This is an automated message — please do not reply to this email.
+
+CheeseBall Team

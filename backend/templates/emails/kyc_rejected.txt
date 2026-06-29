@@ -1,0 +1,22 @@
+Hello {% firstof user_name "Valued Customer" %},
+
+KYC Verification — Not Approved
+
+Unfortunately, we were unable to verify your identity from the documents you submitted.
+
+Reason: {{ reason|default:"Documents could not be verified. Please ensure your documents are clear, valid, and match your account details." }}
+
+Next step: Resubmit your documents
+
+Resubmit Documents: {{ cta_url|default:"https://cheeseballapp.com/dashboard/kyc" }}
+
+Tips for a successful resubmission:
+- Use a clear, well-lit photo of your ID
+- Ensure all four corners of the document are visible
+- Make sure the document is not expired
+
+Contact Support: https://cheeseballapp.com/dashboard/support
+
+This is an automated message — please do not reply to this email.
+
+CheeseBall Team

@@ -1,0 +1,21 @@
+Hello {% firstof user_name "Valued Customer" %},
+
+Withdrawal Rejected — {{ asset_code }}
+{{ formatted_date }}
+
+Unfortunately, your withdrawal of {{ amount }} {{ asset_code }} has been rejected.
+
+Withdrawal Details:
+- Asset: {{ asset_code }}
+- Amount: {{ amount }} {{ asset_code }}
+- Reason: {{ reason|default:"No reason provided." }}
+- Date & time: {{ formatted_date }}
+
+Your funds have been returned to your wallet. If you believe this was an error, please contact support.
+
+Try Again: {{ cta_url|default:"https://cheeseballapp.com/dashboard/wallets" }}
+Contact Support: https://cheeseballapp.com/dashboard/support
+
+This is an automated message — please do not reply to this email.
+
+CheeseBall Team

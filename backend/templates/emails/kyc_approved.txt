@@ -1,0 +1,16 @@
+Hello {% firstof user_name "Valued Customer" %},
+
+🎉 Identity Verified — KYC Approved
+
+Your identity has been confirmed. You now have full access to all Cheeseball features including higher limits and withdrawals.
+
+What's Unlocked:
+✓ Higher trading limits
+✓ Unrestricted withdrawals
+✓ Full access to all features
+
+Start Trading: {{ cta_url|default:"https://cheeseballapp.com/dashboard" }}
+
+This is an automated message — please do not reply to this email.
+
+CheeseBall Team

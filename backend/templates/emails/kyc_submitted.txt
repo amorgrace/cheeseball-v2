@@ -1,0 +1,19 @@
+Hello {% firstof user_name "Valued Customer" %},
+
+Identity Verification — Under Review
+
+Your identity documents have been successfully submitted and are currently under review.
+This process usually takes 24–48 hours.
+
+What happens next:
+1. Review in progress — Our team is reviewing your submitted documents.
+2. Decision (24–48 hrs) — You'll receive an email once your verification is complete.
+3. Full access unlocked — After approval, all trading and withdrawal limits are removed.
+
+Check KYC Status: {{ cta_url|default:"https://cheeseballapp.com/dashboard/kyc" }}
+
+Please make sure your submitted documents are valid and clearly legible.
+
+This is an automated message — please do not reply to this email.
+
+CheeseBall Team

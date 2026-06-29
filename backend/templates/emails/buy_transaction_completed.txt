@@ -1,0 +1,21 @@
+Hello {% firstof user_name "Valued Customer" %},
+
+Buy Crypto — Transaction Confirmed
+Bought {{ asset_code }} · {{ formatted_date }}
+
+You bought {{ crypto_amount }} {{ asset_code }} successfully — transaction completed.
+The crypto has been credited to your {{ asset_code }} Wallet.
+
+Transaction Details:
+- Reference: {{ reference }}
+- Asset purchased: {{ asset_code }}
+- Amount purchased: {{ crypto_amount }} {{ asset_code }}{% if usd_value %} (${{ usd_value }}){% endif %}
+- Payment method: {{ payment_method|default:"NGN Wallet" }}
+- Date & time: {{ formatted_date }}
+- Total paid: ₦{{ naira_amount }}
+
+View Wallet: {{ cta_url|default:"https://cheeseballapp.com/dashboard/wallets" }}
+
+This is an automated message — please do not reply to this email.
+
+CheeseBall Team

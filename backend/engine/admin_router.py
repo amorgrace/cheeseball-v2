@@ -447,6 +447,11 @@ async def review_kyc(request, kyc_id: str, payload: AdminKYCReviewSchema):
                 notification_type=Notification.KYC_APPROVED,
                 reference_id=submission.id,
                 reference_type="KYCSubmission",
+                extra_context={
+                    "template_name": "emails/kyc_approved.html",
+                    "text_template_name": "emails/kyc_approved.txt",
+                    "cta_url": "https://cheeseballapp.com/dashboard",
+                },
             )
         else:
             note_text = payload.admin_note or "No reason provided."
@@ -457,6 +462,12 @@ async def review_kyc(request, kyc_id: str, payload: AdminKYCReviewSchema):
                 notification_type=Notification.KYC_REJECTED,
                 reference_id=submission.id,
                 reference_type="KYCSubmission",
+                extra_context={
+                    "template_name": "emails/kyc_rejected.html",
+                    "text_template_name": "emails/kyc_rejected.txt",
+                    "reason": note_text,
+                    "cta_url": "https://cheeseballapp.com/dashboard/kyc",
+                },
             )
 
         return MessageSchema(detail=f"KYC {payload.action}d successfully.")
@@ -517,6 +528,9 @@ async def approve_withdrawal(request, withdrawal_id: str, payload: AdminWithdraw
         # --- Notify user ---
         from notifications.models import Notification
         from notifications.services import notify
+        from django.utils import timezone as _tz
+        _fdate = _tz.localtime(w.completed_at or _tz.now()).strftime("%m/%d/%Y, %I:%M %p")
+        _dest = w.bank_account_number or w.wallet_address or ""
         notify(
             w.user,
             title="Withdrawal Approved",
@@ -524,6 +538,16 @@ async def approve_withdrawal(request, withdrawal_id: str, payload: AdminWithdraw
             notification_type=Notification.WITHDRAWAL_APPROVED,
             reference_id=w.id,
             reference_type="Withdrawal",
+            extra_context={
+                "template_name": "emails/withdrawal_approved.html",
+                "text_template_name": "emails/withdrawal_approved.txt",
+                "amount": str(w.amount),
+                "asset_code": w.asset.code,
+                "withdrawal_type": "NGN" if w.asset.code == "NGN" else "Crypto",
+                "destination": _dest,
+                "formatted_date": _fdate,
+                "cta_url": "https://cheeseballapp.com/dashboard/wallets",
+            },
         )
 
         return MessageSchema(detail="Withdrawal approved.")
@@ -552,7 +576,9 @@ async def reject_withdrawal(request, withdrawal_id: str, payload: AdminWithdrawa
         # --- Notify user ---
         from notifications.models import Notification
         from notifications.services import notify
+        from django.utils import timezone as _tz
         reason = payload.rejection_reason or "No reason provided."
+        _fdate = _tz.localtime(w.failed_at or _tz.now()).strftime("%m/%d/%Y, %I:%M %p")
         notify(
             w.user,
             title="Withdrawal Rejected",
@@ -560,6 +586,15 @@ async def reject_withdrawal(request, withdrawal_id: str, payload: AdminWithdrawa
             notification_type=Notification.WITHDRAWAL_REJECTED,
             reference_id=w.id,
             reference_type="Withdrawal",
+            extra_context={
+                "template_name": "emails/withdrawal_rejected.html",
+                "text_template_name": "emails/withdrawal_rejected.txt",
+                "amount": str(w.amount),
+                "asset_code": w.asset.code,
+                "reason": reason,
+                "formatted_date": _fdate,
+                "cta_url": "https://cheeseballapp.com/dashboard/wallets",
+            },
         )
 
         return MessageSchema(detail="Withdrawal rejected.")

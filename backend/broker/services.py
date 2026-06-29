@@ -136,33 +136,312 @@ def _notify_transaction_status(transaction: Transaction, status: str):
     amount = transaction.crypto_amount
 
     if status == Transaction.COMPLETED:
-        notify(
-            transaction.user,
-            title=f"{txn_type} Order Completed",
-            message=f"Your {txn_type.lower()} order for {amount} {asset_code} has been completed successfully.",
-            notification_type=Notification.TRANSACTION_COMPLETED,
-            reference_id=transaction.id,
-            reference_type="Transaction",
-        )
+        if transaction.transaction_type == Transaction.SELL:
+            import decimal
+            from django.utils import timezone
+
+            local_dt = timezone.localtime(transaction.completed_at or transaction.updated_at or timezone.now())
+            formatted_date = local_dt.strftime("%m/%d/%Y, %I:%M %p")
+
+            symbols_map = {
+                "USDT": "₮",
+                "BTC": "₿",
+                "ETH": "Ξ",
+                "SOL": "S",
+                "USDC": "$",
+            }
+            asset_symbol = symbols_map.get(asset_code.upper(), asset_code[0] if asset_code else "")
+
+            usd_value = None
+            if transaction.crypto_usd_price:
+                usd_amt = transaction.crypto_amount * transaction.crypto_usd_price
+                usd_value = f"{usd_amt:,.2f}"
+
+            extra_ctx = {
+                "template_name": "emails/sell_transaction_confirmed.html",
+                "text_template_name": "emails/sell_transaction_confirmed.txt",
+                "crypto_amount": f"{transaction.crypto_amount:g}" if isinstance(transaction.crypto_amount, decimal.Decimal) else f"{transaction.crypto_amount}",
+                "asset_code": asset_code,
+                "naira_amount": f"{transaction.naira_amount:,.2f}",
+                "formatted_date": formatted_date,
+                "reference": transaction.id,
+                "asset_symbol": asset_symbol,
+                "usd_value": usd_value,
+                "payout_method": "NGN Wallet",
+                "cta_url": "https://cheeseballapp.com/dashboard/history",
+                "secondary_cta_url": "https://cheeseballapp.com/dashboard/sell",
+            }
+            notify(
+                transaction.user,
+                title="Sell Crypto — Transaction Confirmed",
+                message=f"You sold {transaction.crypto_amount} {asset_code} and received ₦{transaction.naira_amount:,.2f} — transaction completed successfully.",
+                notification_type=Notification.TRANSACTION_COMPLETED,
+                reference_id=transaction.id,
+                reference_type="Transaction",
+                extra_context=extra_ctx,
+            )
+        else:
+            if transaction.transaction_type == Transaction.BUY:
+                import decimal
+                from django.utils import timezone
+                local_dt = timezone.localtime(transaction.completed_at or transaction.updated_at or timezone.now())
+                formatted_date = local_dt.strftime("%m/%d/%Y, %I:%M %p")
+                symbols_map = {
+                    "USDT": "₮",
+                    "BTC": "₿",
+                    "ETH": "Ξ",
+                    "SOL": "S",
+                    "USDC": "$",
+                }
+                asset_symbol = symbols_map.get(asset_code.upper(), asset_code[0] if asset_code else "")
+                usd_value = None
+                if transaction.crypto_usd_price:
+                    usd_amt = transaction.crypto_amount * transaction.crypto_usd_price
+                    usd_value = f"{usd_amt:,.2f}"
+
+                pm_map = {
+                    Transaction.PAYSTACK: "Paystack",
+                    Transaction.BANK_TRANSFER: "Bank transfer",
+                    Transaction.NGN_WALLET: "NGN wallet",
+                }
+                payment_method_name = pm_map.get(transaction.payment_method, "NGN Wallet")
+
+                extra_ctx = {
+                    "template_name": "emails/buy_transaction_completed.html",
+                    "text_template_name": "emails/buy_transaction_completed.txt",
+                    "crypto_amount": f"{transaction.crypto_amount:g}" if isinstance(transaction.crypto_amount, decimal.Decimal) else f"{transaction.crypto_amount}",
+                    "asset_code": asset_code,
+                    "naira_amount": f"{transaction.naira_amount:,.2f}",
+                    "formatted_date": formatted_date,
+                    "reference": transaction.id,
+                    "asset_symbol": asset_symbol,
+                    "usd_value": usd_value,
+                    "payment_method": payment_method_name,
+                    "cta_url": "https://cheeseballapp.com/dashboard/wallets",
+                    "secondary_cta_url": "https://cheeseballapp.com/dashboard/buy",
+                }
+                notify(
+                    transaction.user,
+                    title="Buy Crypto — Transaction Confirmed",
+                    message=f"You bought {transaction.crypto_amount} {asset_code} successfully — transaction completed.",
+                    notification_type=Notification.TRANSACTION_COMPLETED,
+                    reference_id=transaction.id,
+                    reference_type="Transaction",
+                    extra_context=extra_ctx,
+                )
+            else:
+                notify(
+                    transaction.user,
+                    title=f"{txn_type} Order Completed",
+                    message=f"Your {txn_type.lower()} order for {amount} {asset_code} has been completed successfully.",
+                    notification_type=Notification.TRANSACTION_COMPLETED,
+                    reference_id=transaction.id,
+                    reference_type="Transaction",
+                )
     elif status == Transaction.FAILED:
-        notify(
-            transaction.user,
-            title=f"{txn_type} Order Failed",
-            message=f"Your {txn_type.lower()} order for {amount} {asset_code} has failed. Please contact support.",
-            notification_type=Notification.TRANSACTION_FAILED,
-            reference_id=transaction.id,
-            reference_type="Transaction",
-        )
+        if transaction.transaction_type == Transaction.SELL:
+            import decimal
+            from django.utils import timezone
+            local_dt = timezone.localtime(transaction.failed_at or transaction.updated_at or timezone.now())
+            formatted_date = local_dt.strftime("%m/%d/%Y, %I:%M %p")
+            symbols_map = {
+                "USDT": "₮",
+                "BTC": "₿",
+                "ETH": "Ξ",
+                "SOL": "S",
+                "USDC": "$",
+            }
+            asset_symbol = symbols_map.get(asset_code.upper(), asset_code[0] if asset_code else "")
+            usd_value = None
+            if transaction.crypto_usd_price:
+                usd_amt = transaction.crypto_amount * transaction.crypto_usd_price
+                usd_value = f"{usd_amt:,.2f}"
+
+            reason = transaction.fail_reason or "Transaction failed"
+            if reason == "expired":
+                reason = "Transaction expired — crypto was not received within 24 hours."
+
+            extra_ctx = {
+                "template_name": "emails/sell_transaction_failed.html",
+                "text_template_name": "emails/sell_transaction_failed.txt",
+                "crypto_amount": f"{transaction.crypto_amount:g}" if isinstance(transaction.crypto_amount, decimal.Decimal) else f"{transaction.crypto_amount}",
+                "asset_code": asset_code,
+                "formatted_date": formatted_date,
+                "reference": transaction.id,
+                "asset_symbol": asset_symbol,
+                "usd_value": usd_value,
+                "reason": reason,
+                "status_title": "Failed",
+                "cta_url": "https://cheeseballapp.com/dashboard/sell",
+                "secondary_cta_url": "https://cheeseballapp.com/dashboard",
+            }
+            notify(
+                transaction.user,
+                title="Sell Crypto — Transaction Failed",
+                message=f"Your sell order for {transaction.crypto_amount} {asset_code} has failed. Reason: {reason}",
+                notification_type=Notification.TRANSACTION_FAILED,
+                reference_id=transaction.id,
+                reference_type="Transaction",
+                extra_context=extra_ctx,
+            )
+        else:
+            if transaction.transaction_type == Transaction.BUY:
+                import decimal
+                from django.utils import timezone
+                local_dt = timezone.localtime(transaction.failed_at or transaction.updated_at or timezone.now())
+                formatted_date = local_dt.strftime("%m/%d/%Y, %I:%M %p")
+                symbols_map = {
+                    "USDT": "₮",
+                    "BTC": "₿",
+                    "ETH": "Ξ",
+                    "SOL": "S",
+                    "USDC": "$",
+                }
+                asset_symbol = symbols_map.get(asset_code.upper(), asset_code[0] if asset_code else "")
+                usd_value = None
+                if transaction.crypto_usd_price:
+                    usd_amt = transaction.crypto_amount * transaction.crypto_usd_price
+                    usd_value = f"{usd_amt:,.2f}"
+                buy_fail_reason = transaction.fail_reason or "Transaction failed"
+                pm_map = {
+                    Transaction.PAYSTACK: "Paystack",
+                    Transaction.BANK_TRANSFER: "Bank transfer",
+                    Transaction.NGN_WALLET: "NGN wallet",
+                }
+                payment_method_name = pm_map.get(transaction.payment_method, "NGN Wallet")
+                extra_ctx = {
+                    "template_name": "emails/buy_transaction_failed.html",
+                    "text_template_name": "emails/buy_transaction_failed.txt",
+                    "crypto_amount": f"{transaction.crypto_amount:g}" if isinstance(transaction.crypto_amount, decimal.Decimal) else f"{transaction.crypto_amount}",
+                    "asset_code": asset_code,
+                    "formatted_date": formatted_date,
+                    "reference": transaction.id,
+                    "asset_symbol": asset_symbol,
+                    "usd_value": usd_value,
+                    "reason": buy_fail_reason,
+                    "payment_method": payment_method_name,
+                    "status_title": "Failed",
+                    "cta_url": "https://cheeseballapp.com/dashboard/buy",
+                    "secondary_cta_url": "https://cheeseballapp.com/dashboard",
+                }
+                notify(
+                    transaction.user,
+                    title="Buy Crypto — Transaction Failed",
+                    message=f"Your buy order for {transaction.crypto_amount} {asset_code} has failed. Reason: {buy_fail_reason}",
+                    notification_type=Notification.TRANSACTION_FAILED,
+                    reference_id=transaction.id,
+                    reference_type="Transaction",
+                    extra_context=extra_ctx,
+                )
+            else:
+                notify(
+                    transaction.user,
+                    title=f"{txn_type} Order Failed",
+                    message=f"Your {txn_type.lower()} order for {amount} {asset_code} has failed. Please contact support.",
+                    notification_type=Notification.TRANSACTION_FAILED,
+                    reference_id=transaction.id,
+                    reference_type="Transaction",
+                )
     elif status == Transaction.REJECTED:
         reason = transaction.rejection_reason or "No reason provided."
-        notify(
-            transaction.user,
-            title=f"{txn_type} Order Rejected",
-            message=f"Your {txn_type.lower()} order for {amount} {asset_code} was rejected. Reason: {reason}",
-            notification_type=Notification.TRANSACTION_REJECTED,
-            reference_id=transaction.id,
-            reference_type="Transaction",
-        )
+        if transaction.transaction_type == Transaction.SELL:
+            import decimal
+            from django.utils import timezone
+            local_dt = timezone.localtime(transaction.reviewed_at or transaction.updated_at or timezone.now())
+            formatted_date = local_dt.strftime("%m/%d/%Y, %I:%M %p")
+            symbols_map = {
+                "USDT": "₮",
+                "BTC": "₿",
+                "ETH": "Ξ",
+                "SOL": "S",
+                "USDC": "$",
+            }
+            asset_symbol = symbols_map.get(asset_code.upper(), asset_code[0] if asset_code else "")
+            usd_value = None
+            if transaction.crypto_usd_price:
+                usd_amt = transaction.crypto_amount * transaction.crypto_usd_price
+                usd_value = f"{usd_amt:,.2f}"
+
+            extra_ctx = {
+                "template_name": "emails/sell_transaction_failed.html",
+                "text_template_name": "emails/sell_transaction_failed.txt",
+                "crypto_amount": f"{transaction.crypto_amount:g}" if isinstance(transaction.crypto_amount, decimal.Decimal) else f"{transaction.crypto_amount}",
+                "asset_code": asset_code,
+                "formatted_date": formatted_date,
+                "reference": transaction.id,
+                "asset_symbol": asset_symbol,
+                "usd_value": usd_value,
+                "reason": reason,
+                "status_title": "Rejected",
+                "cta_url": "https://cheeseballapp.com/dashboard/sell",
+                "secondary_cta_url": "https://cheeseballapp.com/dashboard",
+            }
+            notify(
+                transaction.user,
+                title="Sell Crypto — Transaction Rejected",
+                message=f"Your sell order for {transaction.crypto_amount} {asset_code} was rejected. Reason: {reason}",
+                notification_type=Notification.TRANSACTION_REJECTED,
+                reference_id=transaction.id,
+                reference_type="Transaction",
+                extra_context=extra_ctx,
+            )
+        else:
+            if transaction.transaction_type == Transaction.BUY:
+                import decimal
+                from django.utils import timezone
+                local_dt = timezone.localtime(transaction.reviewed_at or transaction.updated_at or timezone.now())
+                formatted_date = local_dt.strftime("%m/%d/%Y, %I:%M %p")
+                symbols_map = {
+                    "USDT": "₮",
+                    "BTC": "₿",
+                    "ETH": "Ξ",
+                    "SOL": "S",
+                    "USDC": "$",
+                }
+                asset_symbol = symbols_map.get(asset_code.upper(), asset_code[0] if asset_code else "")
+                usd_value = None
+                if transaction.crypto_usd_price:
+                    usd_amt = transaction.crypto_amount * transaction.crypto_usd_price
+                    usd_value = f"{usd_amt:,.2f}"
+                pm_map = {
+                    Transaction.PAYSTACK: "Paystack",
+                    Transaction.BANK_TRANSFER: "Bank transfer",
+                    Transaction.NGN_WALLET: "NGN wallet",
+                }
+                payment_method_name = pm_map.get(transaction.payment_method, "NGN Wallet")
+                extra_ctx = {
+                    "template_name": "emails/buy_transaction_failed.html",
+                    "text_template_name": "emails/buy_transaction_failed.txt",
+                    "crypto_amount": f"{transaction.crypto_amount:g}" if isinstance(transaction.crypto_amount, decimal.Decimal) else f"{transaction.crypto_amount}",
+                    "asset_code": asset_code,
+                    "formatted_date": formatted_date,
+                    "reference": transaction.id,
+                    "asset_symbol": asset_symbol,
+                    "usd_value": usd_value,
+                    "reason": reason,
+                    "payment_method": payment_method_name,
+                    "status_title": "Rejected",
+                    "cta_url": "https://cheeseballapp.com/dashboard/buy",
+                    "secondary_cta_url": "https://cheeseballapp.com/dashboard",
+                }
+                notify(
+                    transaction.user,
+                    title="Buy Crypto — Transaction Rejected",
+                    message=f"Your buy order for {transaction.crypto_amount} {asset_code} was rejected. Reason: {reason}",
+                    notification_type=Notification.TRANSACTION_REJECTED,
+                    reference_id=transaction.id,
+                    reference_type="Transaction",
+                    extra_context=extra_ctx,
+                )
+            else:
+                notify(
+                    transaction.user,
+                    title=f"{txn_type} Order Rejected",
+                    message=f"Your {txn_type.lower()} order for {amount} {asset_code} was rejected. Reason: {reason}",
+                    notification_type=Notification.TRANSACTION_REJECTED,
+                    reference_id=transaction.id,
+                    reference_type="Transaction",
+                )
 
 
 def _pay_referral_reward(user):
@@ -184,8 +463,15 @@ def _pay_referral_reward(user):
         notify(
             user.referred_by,
             title="Referral Reward Received!",
-            message=f"You earned ₦{REFERRAL_REWARD_NGN:,.0f} because {user.email} completed their first trade.",
+            message=f"You earned \u20a6{REFERRAL_REWARD_NGN:,.0f} because {user.email} completed their first trade.",
             notification_type=Notification.REFERRAL_REWARD,
+            extra_context={
+                "template_name": "emails/referral_reward.html",
+                "text_template_name": "emails/referral_reward.txt",
+                "reward_amount": f"\u20a6{REFERRAL_REWARD_NGN:,.0f}",
+                "referee_email": user.email,
+                "cta_url": "https://cheeseballapp.com/dashboard/referrals",
+            },
         )
     except Exception:
         logger.exception("Failed to pay referral reward for %s", user.email)

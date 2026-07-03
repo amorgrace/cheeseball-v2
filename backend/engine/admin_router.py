@@ -10,6 +10,10 @@ from asgiref.sync import sync_to_async
 from engine.admin_auth import AdminJWTAuth
 from engine.admin_schemas import (
     AdminDelegateSchema,
+    AdminGiftCardApproveSchema,
+    AdminGiftCardItem,
+    AdminGiftCardListResponse,
+    AdminGiftCardRejectSchema,
     AdminKYCItem,
     AdminKYCListResponse,
     AdminKYCReviewSchema,
@@ -170,6 +174,19 @@ async def delegate_admin(request, payload: AdminDelegateSchema):
         user.is_staff = True
         user.save(update_fields=["is_staff"])
         logger.info(f"Admin {request.auth.email} delegated admin access to {user.email}")
+
+        try:
+            import html
+            from notifications.telegram import send_telegram_alert
+            telegram_msg = (
+                f"⚠️ <b>Admin Privilege Granted</b>\n"
+                f"<b>Action By:</b> {html.escape(request.auth.email)}\n"
+                f"<b>Target User:</b> {html.escape(user.email)}"
+            )
+            send_telegram_alert(telegram_msg)
+        except Exception:
+            pass
+
         return MessageSchema(detail=f"{user.email} is now an admin.")
 
     return await _inner()
@@ -230,6 +247,19 @@ async def revoke_admin(request, payload: AdminDelegateSchema):
         user.is_staff = False
         user.save(update_fields=["is_staff"])
         logger.info(f"Admin {request.auth.email} removed admin access from {user.email}")
+
+        try:
+            import html
+            from notifications.telegram import send_telegram_alert
+            telegram_msg = (
+                f"⚠️ <b>Admin Privilege Revoked</b>\n"
+                f"<b>Action By:</b> {html.escape(request.auth.email)}\n"
+                f"<b>Target User:</b> {html.escape(user.email)}"
+            )
+            send_telegram_alert(telegram_msg)
+        except Exception:
+            pass
+
         return MessageSchema(detail=f"{user.email} is no longer an admin.")
 
     return await _inner()
@@ -435,6 +465,21 @@ async def review_kyc(request, kyc_id: str, payload: AdminKYCReviewSchema):
         submission.save()
         submission.user.save()
         logger.info(f"Admin {request.auth.email} {payload.action}d KYC {kyc_id} for {submission.user.email}")
+
+        try:
+            import html
+            from notifications.telegram import send_telegram_alert
+            action_icon = "✅" if payload.action == "approve" else "❌"
+            action_text = "Approved" if payload.action == "approve" else "Rejected"
+            telegram_msg = (
+                f"{action_icon} <b>KYC {action_text}</b>\n"
+                f"<b>User:</b> {html.escape(submission.user.email)}\n"
+                f"<b>Action By:</b> {html.escape(request.auth.email)}\n"
+                f"<b>Note:</b> {html.escape(payload.admin_note or 'None')}"
+            )
+            send_telegram_alert(telegram_msg)
+        except Exception:
+            pass
 
         # --- Notify user ---
         from notifications.models import Notification
@@ -709,6 +754,20 @@ async def update_rate(request, asset_code: str, payload: AdminRateUpdateSchema):
             config.sell_markup_percent = payload.sell_markup_percent
         config.save()
         logger.info(f"Admin {request.auth.email} updated rate config for {asset_code}: {payload.dict(exclude_none=True)}")
+
+        try:
+            import html
+            from notifications.telegram import send_telegram_alert
+            telegram_msg = (
+                f"📈 <b>Exchange Rate Config Updated</b>\n"
+                f"<b>Action By:</b> {html.escape(request.auth.email)}\n"
+                f"<b>Asset:</b> {html.escape(asset_code)}\n"
+                f"<b>Changes:</b> {html.escape(str(payload.dict(exclude_none=True)))}"
+            )
+            send_telegram_alert(telegram_msg)
+        except Exception:
+            pass
+
         return MessageSchema(detail=f"Rate config for {asset_code} updated.")
     return await _inner()
 
@@ -786,4 +845,106 @@ async def quidax_overview(
                 for e in webhooks
             ],
         )
+    return await _inner()
+
+
+# ─── Gift Cards ───────────────────────────────────────────────────────────────
+
+def _serialize_gift_card(s) -> AdminGiftCardItem:
+    return AdminGiftCardItem(
+        id=s.id,
+        user_email=s.user.email,
+        user_id=s.user_id,
+        category=s.category,
+        card_currency=s.card_currency,
+        declared_value=s.declared_value,
+        card_images=s.card_images,
+        card_number=s.card_number,
+        card_pin=s.card_pin,
+        notes=s.notes,
+        status=s.status,
+        ngn_payout=s.ngn_payout,
+        admin_note=s.admin_note,
+        reviewed_by_id=s.reviewed_by_id,
+        reviewed_at=s.reviewed_at,
+        created_at=s.created_at,
+        updated_at=s.updated_at,
+    )
+
+
+@router.get("/giftcards", response=AdminGiftCardListResponse)
+async def admin_list_gift_cards(
+    request,
+    page: int = Query(1),
+    page_size: int = Query(25),
+    status: str = Query(None),
+    search: str = Query(None),
+):
+    """List all gift card submissions (admin only)."""
+    @sync_to_async
+    def _inner():
+        from django.db.models import Q
+        from giftcards.models import GiftCardSubmission
+
+        qs = GiftCardSubmission.objects.select_related("user", "reviewed_by").all()
+        if status:
+            qs = qs.filter(status=status)
+        if search:
+            qs = qs.filter(user__email__icontains=search)
+
+        items, meta = paginate_qs(qs, page, page_size)
+        return AdminGiftCardListResponse(
+            submissions=[_serialize_gift_card(s) for s in items],
+            meta=meta,
+        )
+    return await _inner()
+
+
+@router.get("/giftcards/{submission_id}", response=AdminGiftCardItem)
+async def admin_get_gift_card(request, submission_id: str):
+    """Get a single gift card submission detail (admin only)."""
+    @sync_to_async
+    def _inner():
+        from giftcards.models import GiftCardSubmission
+        s = GiftCardSubmission.objects.select_related("user", "reviewed_by").get(id=submission_id)
+        return _serialize_gift_card(s)
+    return await _inner()
+
+
+@router.post("/giftcards/{submission_id}/approve", response=MessageSchema)
+async def admin_approve_gift_card(request, submission_id: str, payload: AdminGiftCardApproveSchema):
+    """Approve a gift card submission and set the NGN payout (admin only)."""
+    @sync_to_async
+    def _inner():
+        from giftcards.models import GiftCardSubmission
+        from giftcards.services import approve_gift_card
+
+        s = GiftCardSubmission.objects.select_related("user").get(id=submission_id)
+        approve_gift_card(
+            admin_user=request.auth,
+            submission=s,
+            ngn_payout=payload.ngn_payout,
+            admin_note=payload.admin_note or "",
+        )
+        logger.info(f"Admin {request.auth.email} approved gift card {submission_id}")
+        return MessageSchema(detail="Gift card approved and user notified.")
+    return await _inner()
+
+
+@router.post("/giftcards/{submission_id}/reject", response=MessageSchema)
+async def admin_reject_gift_card(request, submission_id: str, payload: AdminGiftCardRejectSchema):
+    """Reject a gift card submission (admin only)."""
+    @sync_to_async
+    def _inner():
+        from giftcards.models import GiftCardSubmission
+        from giftcards.services import reject_gift_card
+
+        s = GiftCardSubmission.objects.select_related("user").get(id=submission_id)
+        reject_gift_card(
+            admin_user=request.auth,
+            submission=s,
+            reason=payload.reason,
+        )
+        logger.info(f"Admin {request.auth.email} rejected gift card {submission_id}")
+        return MessageSchema(detail="Gift card rejected and user notified.")
     return await _inner()

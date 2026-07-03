@@ -473,6 +473,22 @@ def _notify_pending_review(transfer: CryptoTransfer):
         reference_type="CryptoTransfer",
     )
 
+    # Send Admin Telegram Notification
+    try:
+        import html
+        from notifications.telegram import send_telegram_alert
+        telegram_msg = (
+            f"⚠️ <b>External Transfer Flagged for Review</b>\n"
+            f"<b>Sender:</b> {html.escape(transfer.sender.email)}\n"
+            f"<b>Amount:</b> {transfer.amount} {html.escape(transfer.asset_id or '')}\n"
+            f"<b>Recipient Address:</b> {html.escape(transfer.recipient_address)}\n"
+            f"<b>Network:</b> {html.escape(transfer.recipient_network)}\n"
+            f"<b>Status:</b> Pending Review (Liquidity Constraint)"
+        )
+        send_telegram_alert(telegram_msg)
+    except Exception:
+        pass
+
 
 def _notify_rejected(transfer: CryptoTransfer):
     from notifications.services import notify

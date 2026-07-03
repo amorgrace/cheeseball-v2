@@ -102,6 +102,29 @@ def transition_transaction(transaction: Transaction, status: str, *, admin_user=
 
     transaction.save(update_fields=update_fields)
 
+    # Send Admin Telegram Notification for Pending Review
+    if status == Transaction.PENDING_REVIEW:
+        try:
+            import html
+            from notifications.telegram import send_telegram_alert
+            txn_type_str = transaction.transaction_type.upper()
+            asset_code_str = transaction.asset.code
+            naira_amt = getattr(transaction, 'naira_amount', 0) or 0
+            crypto_amt = getattr(transaction, 'crypto_amount', 0) or 0
+            
+            telegram_msg = (
+                f"📥 <b>Transaction Awaiting Review</b>\n"
+                f"<b>Type:</b> {html.escape(txn_type_str)}\n"
+                f"<b>User:</b> {html.escape(transaction.user.email)}\n"
+                f"<b>Asset:</b> {html.escape(asset_code_str)}\n"
+                f"<b>Crypto Amount:</b> {crypto_amt}\n"
+                f"<b>Naira Amount:</b> ₦{naira_amt:,.2f} NGN\n"
+                f"<b>Payment Method:</b> {html.escape(transaction.payment_method or 'N/A')}\n"
+                f"<b>Status:</b> Awaiting Review"
+            )
+            send_telegram_alert(telegram_msg)
+        except Exception:
+            pass
 
     if status in (Transaction.REJECTED, getattr(Transaction, 'CANCELLED', None)):
         if transaction.transaction_type == Transaction.SELL and transaction.crypto_source == Transaction.CRYPTO_SOURCE_CHEESEBALL:

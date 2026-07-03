@@ -202,7 +202,39 @@ def create_withdrawal(user, asset: Asset, amount, bank_name="", bank_account_nam
             withdrawal.rejection_reason = str(e)
             withdrawal.status = Withdrawal.FAILED
             withdrawal.save(update_fields=["rejection_reason", "status"])
+            
+            # Send Telegram notification about failed crypto withdrawal
+            try:
+                import html
+                from notifications.telegram import send_telegram_alert
+                telegram_msg = (
+                    f"⚠️ <b>Automated Crypto Withdrawal Failed</b>\n"
+                    f"<b>User:</b> {html.escape(user.email)}\n"
+                    f"<b>Asset:</b> {html.escape(asset.code)}\n"
+                    f"<b>Amount:</b> {amount}\n"
+                    f"<b>Error:</b> {html.escape(str(e))}"
+                )
+                send_telegram_alert(telegram_msg)
+            except Exception:
+                pass
+            
             raise ValidationError(f"External crypto withdrawal failed: {str(e)}")
+    else:
+        # Send Telegram notification for manual NGN withdrawal
+        try:
+            import html
+            from notifications.telegram import send_telegram_alert
+            telegram_msg = (
+                f"💸 <b>New Withdrawal Request</b>\n"
+                f"<b>User:</b> {html.escape(user.email)}\n"
+                f"<b>Amount:</b> ₦{amount:,.2f} NGN\n"
+                f"<b>Bank:</b> {html.escape(bank_name)} - {html.escape(bank_account_number)}\n"
+                f"<b>Account:</b> {html.escape(bank_account_name)}\n"
+                f"<b>Status:</b> Awaiting Manual Approval"
+            )
+            send_telegram_alert(telegram_msg)
+        except Exception:
+            pass
 
     return withdrawal
 

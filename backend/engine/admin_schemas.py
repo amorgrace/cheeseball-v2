@@ -309,6 +309,43 @@ class AdminQuidaxResponse(Schema):
     webhooks: List[AdminQuidaxWebhookItem]
 
 
+# ─── Gift Cards ──────────────────────────────────────────────────────────────
+
+class AdminGiftCardItem(Schema):
+    id: UUID
+    user_email: str
+    user_id: UUID
+    category: str
+    card_currency: str
+    declared_value: Decimal
+    card_images: str
+    card_number: str
+    card_pin: str
+    notes: str
+    status: str
+    ngn_payout: Optional[Decimal] = None
+    admin_note: str
+    reviewed_by_id: Optional[UUID] = None
+    reviewed_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class AdminGiftCardListResponse(Schema):
+    submissions: List[AdminGiftCardItem]
+    meta: PaginatedMeta
+
+
+class AdminGiftCardApproveSchema(Schema):
+    ngn_payout: Decimal
+    admin_note: Optional[str] = None
+
+
+class AdminGiftCardRejectSchema(Schema):
+    reason: str
+    admin_note: Optional[str] = None
+
+
 # ─── Generic ──────────────────────────────────────────────────────────────────
 
 class MessageSchema(Schema):

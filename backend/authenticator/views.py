@@ -191,6 +191,21 @@ async def register_user(payload: RegisterSchema):
             "Unable to send verification email right now. Registration was rolled back. Please try again."
         )
 
+    try:
+        import html
+        from notifications.telegram import send_telegram_alert
+        ref_text = f"\n<b>Referral Code:</b> {html.escape(payload.referral_code)}" if payload.referral_code else ""
+        phone_text = f"\n<b>Phone:</b> {html.escape(payload.phone_number)}" if payload.phone_number else ""
+        name = payload.fullname or email.split("@")[0]
+        telegram_msg = (
+            f"🎉 <b>New User Registration</b>\n"
+            f"<b>Name:</b> {html.escape(name)}\n"
+            f"<b>Email:</b> {html.escape(email)}{phone_text}{ref_text}"
+        )
+        send_telegram_alert(telegram_msg)
+    except Exception:
+        pass
+
     return {
         "message": "Registration successful. Verify your account with the code sent to your email. If you do not see it in your inbox, please check your spam or junk folder.",
         "resend_available_at": resend_available_at(sent_at).isoformat(),
@@ -269,6 +284,21 @@ async def login_user(request, payload: LoginSchema):
         return Response({"detail": "Invalid credentials"}, status=401)
 
     access = await sync_to_async(AccessToken.for_user)(user)
+
+    if user.is_staff or user.is_superuser:
+        try:
+            import html
+            from notifications.telegram import send_telegram_alert
+            _ua = request.headers.get("User-Agent", "Unknown device")[:120]
+            _device = _ua if _ua != "Unknown device" else "Unknown device"
+            telegram_msg = (
+                f"🚨 <b>Admin Login Detected</b>\n"
+                f"<b>Admin:</b> {html.escape(user.email)}\n"
+                f"<b>Device:</b> {html.escape(_device)}"
+            )
+            send_telegram_alert(telegram_msg)
+        except Exception:
+            pass
 
     # Security alert email — fire and forget
     try:

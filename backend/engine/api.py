@@ -74,6 +74,8 @@ def unhandled_exception_handler(request, exc):
     return api.create_response(request, {"detail": "An internal server error occurred."}, status=500)
 # --------------------------
 
+from giftcards.router import router as giftcards_router
+
 api.add_router("/auth", auth_router)
 api.add_router("/rates", rates_router)
 api.add_router("/broker", broker_router)
@@ -84,4 +86,5 @@ api.add_router("/kyc", kyc_router)
 api.add_router("/quidax", quidax_router)
 api.add_router("/notifications", notifications_router)
 api.add_router("/transfers", transfers_router)
+api.add_router("/giftcards", giftcards_router)
 api.add_router("/admin", admin_router)

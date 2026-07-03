@@ -30,6 +30,20 @@ def submit_kyc(*, user, payload):
     user.kyc_status = user.KYC_SUBMITTED
     user.save(update_fields=["kyc_status"])
 
+    # Send Admin Telegram Notification
+    try:
+        import html
+        from notifications.telegram import send_telegram_alert
+        telegram_msg = (
+            f"ℹ️ <b>New KYC Submission</b>\n"
+            f"<b>User:</b> {html.escape(user.email)}\n"
+            f"<b>ID Type:</b> {html.escape(submission.id_type)}\n"
+            f"<b>Status:</b> Awaiting Review"
+        )
+        send_telegram_alert(telegram_msg)
+    except Exception:
+        pass
+
     # Send KYC Submitted notification email
     try:
         from notifications.services import notify

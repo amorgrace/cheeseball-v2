@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "quidax",
     "notifications",
     "transfers",
+    "giftcards",
 ]
 
 MIDDLEWARE = [
@@ -258,3 +259,7 @@ if _USE_FILE_LOGGING:
     LOGGING["loggers"]["django"]["handlers"].append("django_file")
     LOGGING["loggers"]["django.request"]["handlers"].append("django_file")
     LOGGING["loggers"][""]["handlers"].append("file")
+
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+

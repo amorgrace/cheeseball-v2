@@ -193,14 +193,18 @@ async def register_user(payload: RegisterSchema):
 
     try:
         import html
+        from django.utils import timezone as _tz
         from notifications.telegram import send_telegram_alert
-        ref_text = f"\n<b>Referral Code:</b> {html.escape(payload.referral_code)}" if payload.referral_code else ""
-        phone_text = f"\n<b>Phone:</b> {html.escape(payload.phone_number)}" if payload.phone_number else ""
         name = payload.fullname or email.split("@")[0]
+        _ts = _tz.now().strftime("%Y-%m-%d %H:%M UTC")
+        _phone_line = f"\n📱 Phone: {html.escape(payload.phone_number)}" if payload.phone_number else ""
+        _ref_line = f"\n🔗 Referral: {html.escape(payload.referral_code)}" if payload.referral_code else ""
         telegram_msg = (
-            f"🎉 <b>New User Registration</b>\n"
-            f"<b>Name:</b> {html.escape(name)}\n"
-            f"<b>Email:</b> {html.escape(email)}{phone_text}{ref_text}"
+            f"🎉 <b>NEW USER REGISTRATION</b>\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"👤 Name: {html.escape(name)}\n"
+            f"📧 Email: {html.escape(email)}{_phone_line}{_ref_line}\n"
+            f"⏰ {_ts}"
         )
         send_telegram_alert(telegram_msg)
     except Exception:
@@ -288,13 +292,17 @@ async def login_user(request, payload: LoginSchema):
     if user.is_staff or user.is_superuser:
         try:
             import html
+            from django.utils import timezone as _tz
             from notifications.telegram import send_telegram_alert
             _ua = request.headers.get("User-Agent", "Unknown device")[:120]
             _device = _ua if _ua != "Unknown device" else "Unknown device"
+            _ts = _tz.now().strftime("%Y-%m-%d %H:%M UTC")
             telegram_msg = (
-                f"🚨 <b>Admin Login Detected</b>\n"
-                f"<b>Admin:</b> {html.escape(user.email)}\n"
-                f"<b>Device:</b> {html.escape(_device)}"
+                f"🔐 <b>ADMIN LOGIN DETECTED</b>\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"👤 Admin: {html.escape(user.email)}\n"
+                f"🖥️ Device: {html.escape(_device)}\n"
+                f"⏰ {_ts}"
             )
             send_telegram_alert(telegram_msg)
         except Exception:

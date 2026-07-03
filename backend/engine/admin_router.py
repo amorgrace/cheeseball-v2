@@ -178,10 +178,13 @@ async def delegate_admin(request, payload: AdminDelegateSchema):
         try:
             import html
             from notifications.telegram import send_telegram_alert
+            _ts = timezone.now().strftime("%Y-%m-%d %H:%M UTC")
             telegram_msg = (
-                f"⚠️ <b>Admin Privilege Granted</b>\n"
-                f"<b>Action By:</b> {html.escape(request.auth.email)}\n"
-                f"<b>Target User:</b> {html.escape(user.email)}"
+                f"⚠️ <b>ADMIN ACCESS GRANTED</b>\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"👮 Action By: {html.escape(request.auth.email)}\n"
+                f"👤 Target User: {html.escape(user.email)}\n"
+                f"⏰ {_ts}"
             )
             send_telegram_alert(telegram_msg)
         except Exception:
@@ -251,10 +254,13 @@ async def revoke_admin(request, payload: AdminDelegateSchema):
         try:
             import html
             from notifications.telegram import send_telegram_alert
+            _ts = timezone.now().strftime("%Y-%m-%d %H:%M UTC")
             telegram_msg = (
-                f"⚠️ <b>Admin Privilege Revoked</b>\n"
-                f"<b>Action By:</b> {html.escape(request.auth.email)}\n"
-                f"<b>Target User:</b> {html.escape(user.email)}"
+                f"⚠️ <b>ADMIN ACCESS REVOKED</b>\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"👮 Action By: {html.escape(request.auth.email)}\n"
+                f"👤 Target User: {html.escape(user.email)}\n"
+                f"⏰ {_ts}"
             )
             send_telegram_alert(telegram_msg)
         except Exception:
@@ -470,12 +476,15 @@ async def review_kyc(request, kyc_id: str, payload: AdminKYCReviewSchema):
             import html
             from notifications.telegram import send_telegram_alert
             action_icon = "✅" if payload.action == "approve" else "❌"
-            action_text = "Approved" if payload.action == "approve" else "Rejected"
+            action_label = "KYC APPROVED" if payload.action == "approve" else "KYC REJECTED"
+            _ts = timezone.now().strftime("%Y-%m-%d %H:%M UTC")
             telegram_msg = (
-                f"{action_icon} <b>KYC {action_text}</b>\n"
-                f"<b>User:</b> {html.escape(submission.user.email)}\n"
-                f"<b>Action By:</b> {html.escape(request.auth.email)}\n"
-                f"<b>Note:</b> {html.escape(payload.admin_note or 'None')}"
+                f"{action_icon} <b>{action_label}</b>\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"👤 User: {html.escape(submission.user.email)}\n"
+                f"👮 Action By: {html.escape(request.auth.email)}\n"
+                f"📝 Note: {html.escape(payload.admin_note or 'None')}\n"
+                f"⏰ {_ts}"
             )
             send_telegram_alert(telegram_msg)
         except Exception:
@@ -758,11 +767,15 @@ async def update_rate(request, asset_code: str, payload: AdminRateUpdateSchema):
         try:
             import html
             from notifications.telegram import send_telegram_alert
+            _ts = timezone.now().strftime("%Y-%m-%d %H:%M UTC")
+            _changes = str(payload.dict(exclude_none=True))
             telegram_msg = (
-                f"📈 <b>Exchange Rate Config Updated</b>\n"
-                f"<b>Action By:</b> {html.escape(request.auth.email)}\n"
-                f"<b>Asset:</b> {html.escape(asset_code)}\n"
-                f"<b>Changes:</b> {html.escape(str(payload.dict(exclude_none=True)))}"
+                f"📈 <b>RATE CONFIG UPDATED</b>\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"👮 Action By: {html.escape(request.auth.email)}\n"
+                f"🪙 Asset: {html.escape(asset_code)}\n"
+                f"🔧 Changes: {html.escape(_changes)}\n"
+                f"⏰ {_ts}"
             )
             send_telegram_alert(telegram_msg)
         except Exception:

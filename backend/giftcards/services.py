@@ -38,16 +38,20 @@ def submit_gift_card(*, user, payload) -> GiftCardSubmission:
         status=GiftCardSubmission.PENDING,
     )
 
-    # ── Telegram alert to admin ───────────────────────────────────────────────
+    # ── Telegram alert to admin ───────────────────────────────────────────
     try:
+        from django.utils import timezone as _tz
         from notifications.telegram import send_telegram_alert
+        _ts = _tz.now().strftime("%Y-%m-%d %H:%M UTC")
         msg = (
-            f"🎁 <b>New Gift Card Submission</b>\n"
-            f"<b>User:</b> {_html.escape(user.email)}\n"
-            f"<b>Category:</b> {_html.escape(submission.get_category_display())}\n"
-            f"<b>Currency:</b> {submission.card_currency.upper()}\n"
-            f"<b>Declared Value:</b> {submission.card_currency.upper()} {submission.declared_value:,.2f}\n"
-            f"<b>Status:</b> Awaiting Review"
+            f"🎁 <b>NEW GIFT CARD SUBMISSION</b>\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"👤 User: {_html.escape(user.email)}\n"
+            f"🏷️ Category: {_html.escape(submission.get_category_display())}\n"
+            f"💱 Currency: {submission.card_currency.upper()}\n"
+            f"💰 Value: {submission.card_currency.upper()} {submission.declared_value:,.2f}\n"
+            f"📌 Status: Awaiting Review\n"
+            f"⏰ {_ts}"
         )
         send_telegram_alert(msg)
     except Exception:
@@ -89,16 +93,20 @@ def approve_gift_card(*, admin_user, submission: GiftCardSubmission, ngn_payout,
     except Exception:
         logger.exception("Failed to send approval notification for gift card %s", submission.id)
 
-    # ── Telegram alert to admin ───────────────────────────────────────────────
+    # ── Telegram alert to admin ───────────────────────────────────────────
     try:
+        from django.utils import timezone as _tz
         from notifications.telegram import send_telegram_alert
+        _ts = _tz.now().strftime("%Y-%m-%d %H:%M UTC")
         msg = (
-            f"✅ <b>Gift Card Approved</b>\n"
-            f"<b>User:</b> {_html.escape(submission.user.email)}\n"
-            f"<b>Category:</b> {_html.escape(submission.get_category_display())}\n"
-            f"<b>Declared Value:</b> {submission.card_currency.upper()} {submission.declared_value:,.2f}\n"
-            f"<b>NGN Payout:</b> ₦{ngn_payout:,.2f}\n"
-            f"<b>Action By:</b> {_html.escape(admin_user.email)}"
+            f"✅ <b>GIFT CARD APPROVED</b>\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"👤 User: {_html.escape(submission.user.email)}\n"
+            f"🏷️ Category: {_html.escape(submission.get_category_display())}\n"
+            f"💰 Declared Value: {submission.card_currency.upper()} {submission.declared_value:,.2f}\n"
+            f"💵 NGN Payout: ₦{ngn_payout:,.2f}\n"
+            f"👮 Action By: {_html.escape(admin_user.email)}\n"
+            f"⏰ {_ts}"
         )
         send_telegram_alert(msg)
     except Exception:
@@ -140,16 +148,20 @@ def reject_gift_card(*, admin_user, submission: GiftCardSubmission, reason: str)
     except Exception:
         logger.exception("Failed to send rejection notification for gift card %s", submission.id)
 
-    # ── Telegram alert to admin ───────────────────────────────────────────────
+    # ── Telegram alert to admin ───────────────────────────────────────────
     try:
+        from django.utils import timezone as _tz
         from notifications.telegram import send_telegram_alert
+        _ts = _tz.now().strftime("%Y-%m-%d %H:%M UTC")
         msg = (
-            f"❌ <b>Gift Card Rejected</b>\n"
-            f"<b>User:</b> {_html.escape(submission.user.email)}\n"
-            f"<b>Category:</b> {_html.escape(submission.get_category_display())}\n"
-            f"<b>Declared Value:</b> {submission.card_currency.upper()} {submission.declared_value:,.2f}\n"
-            f"<b>Reason:</b> {_html.escape(reason)}\n"
-            f"<b>Action By:</b> {_html.escape(admin_user.email)}"
+            f"❌ <b>GIFT CARD REJECTED</b>\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"👤 User: {_html.escape(submission.user.email)}\n"
+            f"🏷️ Category: {_html.escape(submission.get_category_display())}\n"
+            f"💰 Declared Value: {submission.card_currency.upper()} {submission.declared_value:,.2f}\n"
+            f"📝 Reason: {_html.escape(reason)}\n"
+            f"👮 Action By: {_html.escape(admin_user.email)}\n"
+            f"⏰ {_ts}"
         )
         send_telegram_alert(msg)
     except Exception:

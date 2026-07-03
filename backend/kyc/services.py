@@ -33,12 +33,16 @@ def submit_kyc(*, user, payload):
     # Send Admin Telegram Notification
     try:
         import html
+        from django.utils import timezone as _tz
         from notifications.telegram import send_telegram_alert
+        _ts = _tz.now().strftime("%Y-%m-%d %H:%M UTC")
         telegram_msg = (
-            f"ℹ️ <b>New KYC Submission</b>\n"
-            f"<b>User:</b> {html.escape(user.email)}\n"
-            f"<b>ID Type:</b> {html.escape(submission.id_type)}\n"
-            f"<b>Status:</b> Awaiting Review"
+            f"📋 <b>NEW KYC SUBMISSION</b>\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"👤 User: {html.escape(user.email)}\n"
+            f"🪾 ID Type: {html.escape(submission.id_type.replace('_', ' ').title())}\n"
+            f"📌 Status: Awaiting Review\n"
+            f"⏰ {_ts}"
         )
         send_telegram_alert(telegram_msg)
     except Exception:

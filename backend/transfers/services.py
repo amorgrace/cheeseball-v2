@@ -476,14 +476,18 @@ def _notify_pending_review(transfer: CryptoTransfer):
     # Send Admin Telegram Notification
     try:
         import html
+        from django.utils import timezone as _tz
         from notifications.telegram import send_telegram_alert
+        _ts = _tz.now().strftime("%Y-%m-%d %H:%M UTC")
         telegram_msg = (
-            f"⚠️ <b>External Transfer Flagged for Review</b>\n"
-            f"<b>Sender:</b> {html.escape(transfer.sender.email)}\n"
-            f"<b>Amount:</b> {transfer.amount} {html.escape(transfer.asset_id or '')}\n"
-            f"<b>Recipient Address:</b> {html.escape(transfer.recipient_address)}\n"
-            f"<b>Network:</b> {html.escape(transfer.recipient_network)}\n"
-            f"<b>Status:</b> Pending Review (Liquidity Constraint)"
+            f"⚠️ <b>TRANSFER FLAGGED FOR REVIEW</b>\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"👤 Sender: {html.escape(transfer.sender.email)}\n"
+            f"💰 Amount: {transfer.amount} {html.escape(transfer.asset_id or '')}\n"
+            f"📬 Recipient: {html.escape(transfer.recipient_address)}\n"
+            f"🌐 Network: {html.escape(transfer.recipient_network)}\n"
+            f"📌 Reason: Liquidity Constraint\n"
+            f"⏰ {_ts}"
         )
         send_telegram_alert(telegram_msg)
     except Exception:

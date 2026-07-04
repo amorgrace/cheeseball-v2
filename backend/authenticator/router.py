@@ -41,6 +41,7 @@ from .schemas import (
     VerificationChallengeSchema,
     VerifyTokenSchema,
     VerifyResetTokenSchema,
+    GoogleAuthSchema,
 )
 from .views import (
     confirm_password_reset,
@@ -69,6 +70,13 @@ async def register(request, payload: RegisterSchema):
 @ratelimit(key='ip', rate='5/m', block=True)
 async def login(request, payload: LoginSchema):
     return await login_user(request, payload)
+
+
+@router.post("/google/", response=TokenSchema)
+@ratelimit(key='ip', rate='10/m', block=True)
+async def google_auth(request, payload: GoogleAuthSchema):
+    from .views import google_auth_user
+    return await google_auth_user(request, payload)
 
 
 @router.post("/logout", response=MessageSchema)

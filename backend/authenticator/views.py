@@ -25,7 +25,9 @@ from .schemas import (
     UpdateMeSchema,
     VerifyTokenSchema,
     VerifyResetTokenSchema,
+    GoogleAuthSchema,
 )
+import requests
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -668,4 +670,67 @@ async def lookup_user(request, query: str):
         "email": user.email,
         "fullname": user.fullname,
     }
+
+async def google_auth_user(request, payload: GoogleAuthSchema):
+    try:
+        def _get_google_user(token):
+            response = requests.get(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                headers={"Authorization": f"Bearer {token}"}
+            )
+            response.raise_for_status()
+            return response.json()
+            
+        user_info = await sync_to_async(_get_google_user)(payload.token)
+        email = user_info.get("email")
+        if not email:
+            return Response({"detail": "Google authentication failed. No email provided."}, status=400)
+            
+        email = normalize_email(email)
+        
+        user = await User.objects.filter(email=email).afirst()
+        if not user:
+            fullname = user_info.get("name", "")
+            first_name, last_name = split_fullname(fullname)
+            
+            def _create_google_user():
+                new_user = User.objects.create_user(
+                    email=email,
+                    fullname=fullname,
+                    first_name=first_name,
+                    last_name=last_name,
+                    is_active=True,
+                    verified_at=timezone.now()
+                )
+                return new_user
+                
+            user = await sync_to_async(_create_google_user)()
+            
+            try:
+                from notifications.services import notify
+                from notifications.models import Notification
+                await sync_to_async(notify)(
+                    user,
+                    title="Welcome to Cheeseball!",
+                    message="Your account is now active via Google Sign-In. Start buying, selling, and transferring crypto today.",
+                    notification_type=Notification.GENERAL,
+                    extra_context={
+                        "template_name": "emails/welcome.html",
+                        "text_template_name": "emails/welcome.txt",
+                        "user_name": user.first_name or user.fullname or "",
+                        "cta_url": "https://cheeseballapp.com/dashboard",
+                    },
+                )
+            except Exception:
+                logger.exception("Welcome email failed for %s", user.email)
+        
+        access = await sync_to_async(AccessToken.for_user)(user)
+        return auth_success_response(
+            message="Google Sign-In successful",
+            access_token=str(access),
+        )
+        
+    except requests.exceptions.RequestException:
+        logger.exception("Google auth failed")
+        return Response({"detail": "Invalid Google token."}, status=400)
 

@@ -49,6 +49,9 @@ class LoginSchema(Schema):
     def validate_email_address(cls, value: str):
         return normalize_email_value(value)
 
+class GoogleAuthSchema(Schema):
+    token: str
+
 
 class TokenSchema(Schema):
     access: str | None = None

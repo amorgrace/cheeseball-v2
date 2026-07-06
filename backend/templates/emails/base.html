@@ -1,85 +1,61 @@
 <!DOCTYPE html>
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
-<title>{{ headline|default:"Account Update" }}</title>
-<!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+<title>{% block title %}Cheeseball{% endblock %}</title>
 <style>
-  body,table,td,p,a,li,blockquote{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  body,table,td,p,a,span{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
   table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;}
-  img{-ms-interpolation-mode:bicubic;border:0;outline:none;text-decoration:none;}
-  body{margin:0;padding:0;width:100%!important;}
-  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
-  body,.body-bg{background-color:#F7F9FF;}
-  .sora{font-family:'Sora',Helvetica,Arial,sans-serif;}
-  .dmsans{font-family:'DM Sans',Helvetica,Arial,sans-serif;}
-  a{color:#1A6FFF;text-decoration:none;}
-  .cta-btn:hover{background-color:#1259D9!important;}
+  img{border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;}
+  body{margin:0;padding:0;background-color:#f4f5f7;font-family:'Inter',Helvetica,Arial,sans-serif;}
+  a{color:#1a6fff;text-decoration:none;}
   @media only screen and (max-width:600px){
-    .email-container{width:100%!important;}
-    .fluid-padding{padding-left:20px!important;padding-right:20px!important;}
+    .wrap{width:100%!important;}
+    .pad{padding:32px 24px!important;}
+    .btn{padding:14px 24px!important;font-size:14px!important;}
   }
 </style>
 </head>
-<body class="body-bg dmsans" style="margin:0;padding:0;background-color:#F7F9FF;">
-  <div style="display:none;max-height:0px;overflow:hidden;opacity:0;mso-hide:all;">{% firstof preheader notification_message "Account update from Cheeseball" %}</div>
-  <div style="display:none;max-height:0px;overflow:hidden;opacity:0;">&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
+<body style="margin:0;padding:0;background-color:#f4f5f7;">
 
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F7F9FF;">
+  <!-- Preheader -->
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">{% block preheader %}Account update from Cheeseball{% endblock %}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f5f7;">
     <tr>
-      <td align="center" style="padding:40px 16px;">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="email-container" style="width:600px;max-width:600px;">
+      <td align="center" style="padding:48px 16px;">
+        <table role="presentation" class="wrap" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:560px;">
 
-          <!-- LOGO -->
+          <!-- Logo -->
           <tr>
-            <td align="center" style="padding-bottom:28px;">
-              <span class="sora" style="font-size:20px;font-weight:800;color:#0A0F1E;letter-spacing:-0.5px;">Cheese<span style="color:#1A6FFF;">ball</span></span>
-            </td>
-          </tr>
-
-          <!-- MAIN CARD -->
-          <tr>
-            <td style="background-color:#FFFFFF;border:1px solid #E8EEFF;border-radius:24px;overflow:hidden;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td class="fluid-padding" style="padding:40px;">
-                    {% block content %}
-                    {% endblock %}
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- FOOTER -->
-          <tr>
-            <td align="center" style="padding:32px 24px 8px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td style="padding-right:6px;vertical-align:middle;">
-                    <img src="https://img.icons8.com/fluency-systems-filled/48/4ADE80/security-shield--v1.png" width="13" height="13" alt="" style="display:block;">
-                  </td>
-                  <td class="dmsans" style="font-size:12px;color:#6B7A99;vertical-align:middle;">
-                    Your account is secure · <span style="color:#4ADE80;font-weight:600;">Protected by Cheeseball</span>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td align="center" style="padding:4px 24px 12px;">
-              <span class="dmsans" style="font-size:12px;color:#A8B4CC;">Need help? <a href="https://cheeseballapp.com/dashboard/support" style="color:#1A6FFF;font-weight:600;">Contact support</a></span>
-            </td>
-          </tr>
-          <tr>
-            <td align="center" style="padding:12px 24px 40px;">
-              <span class="dmsans" style="font-size:11px;color:#A8B4CC;text-align:center;line-height:1.7;">
-                © 2026 Cheeseball. All rights reserved.<br>This is an automated message — please do not reply.
+            <td align="center" style="padding-bottom:24px;">
+              <span style="font-family:'Inter',Helvetica,Arial,sans-serif;font-size:18px;font-weight:700;color:#0a0f1e;letter-spacing:-0.3px;">
+                Cheese<span style="color:#1a6fff;">ball</span>
               </span>
             </td>
           </tr>
+
+          <!-- Card -->
+          <tr>
+            <td class="pad" style="background:#ffffff;border-radius:16px;border:1px solid #e5e8f0;padding:40px;">
+              {% block content %}{% endblock %}
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding:28px 24px 0;">
+              <p style="margin:0;font-size:12px;color:#9aa3b5;line-height:1.7;text-align:center;">
+                Need help? <a href="https://cheeseballapp.com/dashboard/support" style="color:#1a6fff;">Contact support</a><br>
+                © 2026 Cheeseball · <a href="https://cheeseballapp.com" style="color:#9aa3b5;">cheeseballapp.com</a><br>
+                This is an automated message — please do not reply.
+              </p>
+            </td>
+          </tr>
+
         </table>
       </td>
     </tr>

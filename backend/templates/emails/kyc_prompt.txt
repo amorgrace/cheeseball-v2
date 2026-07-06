@@ -1,0 +1,10 @@
+Complete Your Verification
+
+Welcome to CheeseBall! Your account is now active. To unlock withdrawals, higher trading limits, and full platform access, please complete your identity verification.
+
+Status: Verification Required
+Time required: Takes less than 5 minutes.
+
+Verify My Identity: {{ cta_url|default:'https://cheeseballapp.com/dashboard/kyc' }}
+
+Need help? Contact support@cheeseballapp.com

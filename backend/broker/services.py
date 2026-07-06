@@ -469,6 +469,54 @@ def _notify_transaction_status(transaction: Transaction, status: str):
                 )
 
 
+class DummyTransaction:
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+            
+    @property
+    def asset_code(self):
+        return self.asset.code
+        
+    @property
+    def asset_name(self):
+        return self.asset.name
+
+def _build_dummy_transaction(*, quote, transaction_type, payment_method, wallet_address, network, payout_method, crypto_source, broker_wallet_address=""):
+    dummy = DummyTransaction()
+    dummy.id = f"quote_{quote.id}"
+    dummy.asset = quote.asset
+    dummy.transaction_type = transaction_type
+    dummy.status = Transaction.PENDING_PAYMENT
+    dummy.payment_method = payment_method
+    dummy.naira_amount = quote.naira_amount
+    dummy.crypto_amount = quote.crypto_amount
+    dummy.market_rate = quote.market_rate
+    dummy.markup_percent = quote.markup_percent
+    dummy.final_rate = quote.final_rate
+    dummy.crypto_usd_price = quote.crypto_usd_price
+    dummy.wallet_address = wallet_address
+    dummy.network = network
+    dummy.broker_wallet_address = broker_wallet_address
+    dummy.crypto_source = crypto_source
+    dummy.payout_method = payout_method
+    dummy.bank_name = ""
+    dummy.bank_account_name = ""
+    dummy.bank_account_number = ""
+    dummy.bank_account_type = ""
+    dummy.admin_notes = ""
+    dummy.rejection_reason = ""
+    dummy.fail_reason = ""
+    dummy.created_at = quote.created_at
+    dummy.updated_at = quote.created_at
+    dummy.expires_at = timezone.now() + timedelta(hours=24)
+    dummy.reviewed_at = None
+    dummy.paid_at = None
+    dummy.completed_at = None
+    dummy.failed_at = None
+    return dummy
+
+
 def _pay_referral_reward(user):
     if user.referral_reward_paid or not user.referred_by_id:
         return
@@ -506,30 +554,39 @@ def build_buy_transaction(*, user, payload):
     with db_transaction.atomic():
         quote = get_valid_quote(payload.quote_id, RateQuote.BUY)
         validate_buy_payment_method(quote.asset, payload.payment_method)
-        transaction_obj = Transaction.objects.create(
-            user=user,
-            quote=quote,
-            transaction_type=Transaction.BUY,
-            asset=quote.asset,
-            status=Transaction.PENDING_PAYMENT,
-            payment_method=payload.payment_method,
-            naira_amount=quote.naira_amount,
-            crypto_amount=quote.crypto_amount,
-            market_rate=quote.market_rate,
-            markup_percent=quote.markup_percent,
-            final_rate=quote.final_rate,
-            crypto_usd_price=quote.crypto_usd_price,
-            wallet_address=(payload.wallet_address or "").strip(),
-            network=(payload.network or "").strip(),
-            expires_at=timezone.now() + timedelta(hours=24),
-        )
-
+        
         if payload.payment_method == Transaction.NGN_WALLET:
+            transaction_obj = Transaction.objects.create(
+                user=user,
+                quote=quote,
+                transaction_type=Transaction.BUY,
+                asset=quote.asset,
+                status=Transaction.PENDING_PAYMENT,
+                payment_method=payload.payment_method,
+                naira_amount=quote.naira_amount,
+                crypto_amount=quote.crypto_amount,
+                market_rate=quote.market_rate,
+                markup_percent=quote.markup_percent,
+                final_rate=quote.final_rate,
+                crypto_usd_price=quote.crypto_usd_price,
+                wallet_address=(payload.wallet_address or "").strip(),
+                network=(payload.network or "").strip(),
+                expires_at=timezone.now() + timedelta(hours=24),
+            )
             _debit_ngn_wallet_for_buy(transaction_obj)
             transition_transaction(transaction_obj, Transaction.PAID)
             try_auto_complete_buy(transaction_obj)
-
-        return transaction_obj
+            return transaction_obj
+            
+        return _build_dummy_transaction(
+            quote=quote,
+            transaction_type=Transaction.BUY,
+            payment_method=payload.payment_method,
+            wallet_address=(payload.wallet_address or "").strip(),
+            network=(payload.network or "").strip(),
+            payout_method="",
+            crypto_source=Transaction.CRYPTO_SOURCE_EXTERNAL,
+        )
 
 
 def try_auto_complete_buy(transaction_obj: Transaction):
@@ -588,19 +645,15 @@ def build_sell_transaction(*, user, payload):
         quote = get_valid_quote(payload.quote_id, RateQuote.SELL)
         payout_method = getattr(payload, "payout_method", Transaction.PAYOUT_NGN_WALLET)
         crypto_source = getattr(payload, "crypto_source", Transaction.CRYPTO_SOURCE_EXTERNAL)
-        beneficiary = None
 
         if payout_method != Transaction.PAYOUT_NGN_WALLET:
             raise ValidationError("payout_method must be ngn_wallet")
 
         selected_network = (getattr(payload, "network", None) or "").strip() or quote.asset.network
 
-        # --- External wallet: generate Quidax deposit address ---
-        custody_deposit = None
-        broker_wallet_address = ""
-        quidax_wallet_address_obj = None
-
         if crypto_source == Transaction.CRYPTO_SOURCE_EXTERNAL:
+            broker_wallet_address = ""
+            quidax_wallet_address_obj = None
             try:
                 from quidax.services import ensure_wallet_address
                 quidax_wallet_address_obj = ensure_wallet_address(
@@ -611,8 +664,6 @@ def build_sell_transaction(*, user, payload):
                 broker_wallet_address = quidax_wallet_address_obj.address
             except Exception as exc:
                 logger.exception("Failed to create Quidax deposit wallet for sell — will use PENDING status")
-                # Create a PENDING wallet address record so the transaction can proceed.
-                # The frontend will poll and the webhook will update the address when Quidax responds.
                 from quidax.services import ensure_sub_account
                 from quidax.models import QuidaxWalletAddress, QuidaxSubAccount
                 try:
@@ -630,18 +681,27 @@ def build_sell_transaction(*, user, payload):
                     )
                 except Exception:
                     logger.exception("Failed to create PENDING Quidax wallet address record")
-                broker_wallet_address = ""
-        else:
-            # Internal wallet: validate balance
-            from wallets.services import get_user_wallet
-            wallet = get_user_wallet(user, quote.asset)
-            if wallet.available_balance < quote.crypto_amount:
-                raise ValidationError(f"Insufficient {quote.asset.code} balance in your wallet")
+
+            return _build_dummy_transaction(
+                quote=quote,
+                transaction_type=Transaction.SELL,
+                payment_method="",
+                wallet_address="",
+                network=selected_network,
+                payout_method=payout_method,
+                crypto_source=crypto_source,
+                broker_wallet_address=broker_wallet_address,
+            )
+
+        # --- Internal wallet: validate balance ---
+        from wallets.services import get_user_wallet
+        wallet = get_user_wallet(user, quote.asset)
+        if wallet.available_balance < quote.crypto_amount:
+            raise ValidationError(f"Insufficient {quote.asset.code} balance in your wallet")
 
         transaction_obj = Transaction.objects.create(
             user=user,
             quote=quote,
-            custody_deposit=custody_deposit,
             transaction_type=Transaction.SELL,
             asset=quote.asset,
             status=Transaction.PENDING_PAYMENT,
@@ -652,29 +712,20 @@ def build_sell_transaction(*, user, payload):
             final_rate=quote.final_rate,
             crypto_usd_price=quote.crypto_usd_price,
             network=selected_network,
-            broker_wallet_address=broker_wallet_address,
+            broker_wallet_address="",
             crypto_source=crypto_source,
             payout_method=payout_method,
-            bank_name=beneficiary.bank_name if beneficiary else "",
-            bank_account_name=beneficiary.account_name if beneficiary else "",
-            bank_account_number=beneficiary.account_number if beneficiary else "",
-            bank_account_type=beneficiary.account_type if beneficiary else "",
+            bank_name="",
+            bank_account_name="",
+            bank_account_number="",
+            bank_account_type="",
             expires_at=timezone.now() + timedelta(hours=24),
         )
 
-        if crypto_source == Transaction.CRYPTO_SOURCE_EXTERNAL and quidax_wallet_address_obj:
-            from quidax.services import create_pending_sell_deposit
-            create_pending_sell_deposit(
-                transaction_obj=transaction_obj,
-                wallet_address=quidax_wallet_address_obj
-            )
-
-        # --- Internal wallet: lock crypto and auto-advance ---
-        if crypto_source == Transaction.CRYPTO_SOURCE_CHEESEBALL:
-            _lock_crypto_for_sell(transaction_obj)
-            transition_transaction(transaction_obj, Transaction.PAID)
-            transition_transaction(transaction_obj, Transaction.PROCESSING, note="Auto-processing internal wallet sell")
-            transition_transaction(transaction_obj, Transaction.COMPLETED, note="Auto-completed internal wallet sell")
+        _lock_crypto_for_sell(transaction_obj)
+        transition_transaction(transaction_obj, Transaction.PAID)
+        transition_transaction(transaction_obj, Transaction.PROCESSING, note="Auto-processing internal wallet sell")
+        transition_transaction(transaction_obj, Transaction.COMPLETED, note="Auto-completed internal wallet sell")
 
         return transaction_obj
 

@@ -1,184 +1,26 @@
-<!DOCTYPE html>
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<title>Welcome to Cheeseball!</title>
-<!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
-<style>
-  body,table,td,p,a,li,blockquote{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
-  table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;}
-  img{-ms-interpolation-mode:bicubic;border:0;outline:none;text-decoration:none;}
-  body{margin:0;padding:0;width:100%!important;}
-  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
-  body,.body-bg{background-color:#F7F9FF;}
-  .sora{font-family:'Sora',Helvetica,Arial,sans-serif;}
-  .dmsans{font-family:'DM Sans',Helvetica,Arial,sans-serif;}
-  a{color:#1A6FFF;text-decoration:none;}
-  .cta-btn:hover{background-color:#1259D9!important;}
-  @media only screen and (max-width:600px){.email-container{width:100%!important;}.fluid-padding{padding-left:20px!important;padding-right:20px!important;}}
-</style>
-</head>
-<body class="body-bg dmsans" style="margin:0;padding:0;background-color:#F7F9FF;">
-  <div style="display:none;max-height:0px;overflow:hidden;opacity:0;mso-hide:all;">Welcome to Cheeseball! Your account is now active. Let's get you started.</div>
-  <div style="display:none;max-height:0px;overflow:hidden;opacity:0;">&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
+{% extends "emails/base.html" %}
+{% block title %}Welcome to Cheeseball{% endblock %}
+{% block preheader %}Welcome to Cheeseball! Your account is active and ready.{% endblock %}
 
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F7F9FF;">
-    <tr>
-      <td align="center" style="padding:40px 16px;">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="email-container" style="width:600px;max-width:600px;">
+{% block content %}
+<p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#1a6fff;text-transform:uppercase;letter-spacing:0.6px;">Welcome</p>
+<h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#0a0f1e;">Hey {% firstof user_name "there" %} 👋</h1>
+<p style="margin:0 0 28px;font-size:14px;color:#5a6478;line-height:1.65;">
+  Welcome to Cheeseball! Your account is active and you're all set to start buying, selling, and trading crypto.
+  Complete your identity verification (KYC) to unlock higher trading limits.
+</p>
 
-          <tr>
-            <td align="center" style="padding-bottom:28px;">
-              <span class="sora" style="font-size:20px;font-weight:800;color:#0A0F1E;letter-spacing:-0.5px;">Cheese<span style="color:#1A6FFF;">ball</span></span>
-            </td>
-          </tr>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
+  <tr>
+    <td align="center" bgcolor="#1a6fff" style="border-radius:10px;">
+      <a href="{{ cta_url|default:'https://cheeseballapp.com/dashboard' }}" target="_blank" class="btn" style="display:block;padding:15px 32px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">
+        Go to Dashboard →
+      </a>
+    </td>
+  </tr>
+</table>
 
-          <tr>
-            <td style="background-color:#FFFFFF;border:1px solid #E8EEFF;border-radius:24px;overflow:hidden;">
-
-              <!-- Banner — Brand Blue gradient -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td align="center" style="background-image:linear-gradient(135deg,#1A6FFF 0%,#6D28D9 100%);padding:48px 32px 44px;">
-                    <!-- Big wordmark -->
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                      <tr>
-                        <td align="center" class="sora" style="font-size:32px;font-weight:800;color:#FFFFFF;letter-spacing:-1px;padding-bottom:16px;">
-                          Welcome to<br>Cheeseball 🧀
-                        </td>
-                      </tr>
-                      <tr>
-                        <td align="center" class="dmsans" style="font-size:16px;color:rgba(255,255,255,0.8);line-height:1.6;">
-                          Your account is active and ready.<br>Start buying, selling, and trading crypto today.
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Body -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                <!-- Greeting -->
-                <tr>
-                  <td class="fluid-padding" style="padding:36px 40px 0;">
-                    <span class="sora" style="font-size:18px;font-weight:700;color:#0A0F1E;">Hey {% firstof user_name "there" %} 👋</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="fluid-padding" style="padding:12px 40px 28px;">
-                    <span class="dmsans" style="font-size:14px;color:#4A5568;line-height:1.7;">
-                      Thanks for joining Cheeseball. Your account has been verified and you're all set to start your crypto journey. Here's what you can do right now:
-                    </span>
-                  </td>
-                </tr>
-
-                <!-- Feature cards -->
-                <tr>
-                  <td class="fluid-padding" style="padding:0 40px;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-
-                      <!-- Buy crypto -->
-                      <tr>
-                        <td style="background-color:#F7F9FF;border:1px solid #E8EEFF;border-radius:16px;padding:18px 20px;margin-bottom:12px;">
-                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                            <tr>
-                              <td valign="middle" style="width:40px;">
-                                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:36px;height:36px;background-color:#EEF3FF;border-radius:10px;">
-                                  <tr><td align="center" valign="middle"><img src="https://img.icons8.com/fluency-systems-filled/48/1A6FFF/coins.png" width="20" height="20" alt="$" style="display:block;"></td></tr>
-                                </table>
-                              </td>
-                              <td valign="middle" style="padding-left:14px;">
-                                <span class="sora" style="font-size:14px;font-weight:700;color:#0A0F1E;">Buy Crypto</span><br>
-                                <span class="dmsans" style="font-size:12px;color:#6B7A99;">Purchase BTC, ETH, USDT and more instantly.</span>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                      <tr><td style="height:10px;"></td></tr>
-
-                      <!-- Sell crypto -->
-                      <tr>
-                        <td style="background-color:#F7F9FF;border:1px solid #E8EEFF;border-radius:16px;padding:18px 20px;">
-                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                            <tr>
-                              <td valign="middle" style="width:40px;">
-                                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:36px;height:36px;background-color:#F0FDF4;border-radius:10px;">
-                                  <tr><td align="center" valign="middle"><img src="https://img.icons8.com/fluency-systems-filled/48/16A34A/money-bag.png" width="20" height="20" alt="₦" style="display:block;"></td></tr>
-                                </table>
-                              </td>
-                              <td valign="middle" style="padding-left:14px;">
-                                <span class="sora" style="font-size:14px;font-weight:700;color:#0A0F1E;">Sell Crypto</span><br>
-                                <span class="dmsans" style="font-size:12px;color:#6B7A99;">Convert your crypto to Naira at competitive rates.</span>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                      <tr><td style="height:10px;"></td></tr>
-
-                      <!-- Transfer -->
-                      <tr>
-                        <td style="background-color:#F7F9FF;border:1px solid #E8EEFF;border-radius:16px;padding:18px 20px;">
-                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                            <tr>
-                              <td valign="middle" style="width:40px;">
-                                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:36px;height:36px;background-color:#F5F3FF;border-radius:10px;">
-                                  <tr><td align="center" valign="middle"><img src="https://img.icons8.com/fluency-systems-filled/48/7C3AED/send--v2.png" width="20" height="20" alt="→" style="display:block;"></td></tr>
-                                </table>
-                              </td>
-                              <td valign="middle" style="padding-left:14px;">
-                                <span class="sora" style="font-size:14px;font-weight:700;color:#0A0F1E;">Send &amp; Receive</span><br>
-                                <span class="dmsans" style="font-size:12px;color:#6B7A99;">Transfer crypto to anyone inside or outside Cheeseball.</span>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-
-                    </table>
-                  </td>
-                </tr>
-
-                <!-- KYC nudge -->
-                <tr>
-                  <td class="fluid-padding" style="padding:24px 40px;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFBEB;border:1px solid #FCD34D;border-radius:16px;padding:16px 20px;">
-                      <tr>
-                        <td class="dmsans" style="font-size:13px;color:#92400E;line-height:1.6;">
-                          💡 <strong>Tip:</strong> Complete your identity verification (KYC) to unlock higher trading limits and unrestricted withdrawals.
-                          <a href="https://cheeseballapp.com/dashboard/kyc" style="color:#D97706;font-weight:700;">Verify now →</a>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <tr>
-                  <td class="fluid-padding" align="center" style="padding:4px 40px 8px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-                      <tr>
-                        <td align="center" bgcolor="#1A6FFF" class="cta-btn" style="border-radius:14px;">
-                          <a href="{{ cta_url|default:'https://cheeseballapp.com/dashboard' }}" target="_blank" class="sora" style="display:block;padding:16px 32px;font-size:15px;font-weight:700;color:#FFFFFF;text-decoration:none;letter-spacing:0.2px;">Explore Dashboard&nbsp;&nbsp;→</a>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-                <tr><td align="center" style="padding:14px 40px 36px;"><a href="https://cheeseballapp.com/dashboard/buy" class="dmsans" style="font-size:13px;font-weight:600;color:#1A6FFF;">Start your first trade →</a></td></tr>
-              </table>
-            </td>
-          </tr>
-
-          <tr><td align="center" style="padding:32px 24px 8px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding-right:6px;vertical-align:middle;"><img src="https://img.icons8.com/fluency-systems-filled/48/4ADE80/security-shield--v1.png" width="13" height="13" alt="" style="display:block;"></td><td class="dmsans" style="font-size:12px;color:#6B7A99;vertical-align:middle;">Your account is secure · <span style="color:#4ADE80;font-weight:600;">Protected by Cheeseball</span></td></tr></table></td></tr>
-          <tr><td align="center" style="padding:4px 24px 12px;"><span class="dmsans" style="font-size:12px;color:#A8B4CC;">Need help? <a href="https://cheeseballapp.com/dashboard/support" style="color:#1A6FFF;font-weight:600;">Contact support</a></span></td></tr>
-          <tr><td align="center" style="padding:12px 24px 40px;"><span class="dmsans" style="font-size:11px;color:#A8B4CC;text-align:center;line-height:1.7;">© 2026 Cheeseball. All rights reserved.<br>This is an automated message — please do not reply.</span></td></tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
+<p style="margin:0;font-size:13px;color:#9aa3b5;text-align:center;">
+  <a href="https://cheeseballapp.com/dashboard/kyc" style="color:#1a6fff;font-weight:600;">Complete KYC verification →</a>
+</p>
+{% endblock %}

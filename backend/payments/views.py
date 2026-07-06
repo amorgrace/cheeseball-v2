@@ -78,85 +78,144 @@ def get_payment_instructions():
 
 
 def setup_payment(request, payload):
-    transaction = get_object_or_404(Transaction, id=payload.transaction_id)
-    if transaction.user_id != request.auth.id and not request.auth.is_staff:
-        return Response({"detail": "Transaction not found"}, status=404)
-    if transaction.transaction_type != Transaction.BUY:
-        return Response({"detail": "Payment setup is only available for buy transactions"}, status=400)
-    if transaction.payment_method != payload.payment_method:
-        return Response({"detail": "Payment method does not match this transaction"}, status=400)
+    from broker.services import get_valid_quote
+    from rates.models import RateQuote
+    from django.db import transaction as db_transaction
 
-    payment_record, _ = PaymentRecord.objects.get_or_create(
-        transaction=transaction,
-        defaults={
-            "method": payload.payment_method,
-            "provider": "paystack" if payload.payment_method == PaymentRecord.PAYSTACK else "wallet" if payload.payment_method == PaymentRecord.NGN_WALLET else "manual",
-        },
-    )
-    if payment_record.method != payload.payment_method:
-        payment_record.method = payload.payment_method
-        payment_record.provider = "paystack" if payload.payment_method == PaymentRecord.PAYSTACK else "wallet" if payload.payment_method == PaymentRecord.NGN_WALLET else "manual"
-        payment_record.save(update_fields=["method", "provider"])
+    is_deferred = payload.transaction_id.startswith("quote_")
 
-    if payload.payment_method == PaymentRecord.PAYSTACK:
-        if payment_record.status != PaymentRecord.VERIFIED:
-            try:
-                reference = payment_record.provider_reference or _paystack_reference()
-                metadata = {
-                    "transaction_id": str(transaction.id),
-                    "asset": transaction.asset_code,
-                    "crypto_amount": str(transaction.crypto_amount),
-                }
-                amount_kobo = _amount_to_kobo(transaction.naira_amount)
-                charge_response = create_paystack_charge(
-                    email=transaction.user.email,
-                    amount_kobo=amount_kobo,
-                    reference=reference,
-                    metadata=metadata
-                )
-            except ValidationError as e:
-                return Response({"detail": str(e)}, status=400)
+    with db_transaction.atomic():
+        if is_deferred:
+            quote_id = int(payload.transaction_id.split("_")[1])
+            quote = get_valid_quote(quote_id, RateQuote.BUY)
+            
+            transaction = Transaction.objects.create(
+                user=request.auth,
+                quote=quote,
+                transaction_type=Transaction.BUY,
+                asset=quote.asset,
+                status=Transaction.PENDING_PAYMENT,
+                payment_method=payload.payment_method,
+                naira_amount=quote.naira_amount,
+                crypto_amount=quote.crypto_amount,
+                market_rate=quote.market_rate,
+                markup_percent=quote.markup_percent,
+                final_rate=quote.final_rate,
+                crypto_usd_price=quote.crypto_usd_price,
+                crypto_source=Transaction.CRYPTO_SOURCE_EXTERNAL,
+                expires_at=timezone.now() + timedelta(hours=24),
+            )
+        else:
+            transaction = get_object_or_404(Transaction, id=payload.transaction_id)
+            if transaction.user_id != request.auth.id and not request.auth.is_staff:
+                return Response({"detail": "Transaction not found"}, status=404)
+            if transaction.transaction_type != Transaction.BUY:
+                return Response({"detail": "Payment setup is only available for buy transactions"}, status=400)
+            if not is_deferred and transaction.payment_method and transaction.payment_method != payload.payment_method:
+                return Response({"detail": "Payment method does not match this transaction"}, status=400)
+                
+            transaction.payment_method = payload.payment_method
+            transaction.save(update_fields=["payment_method"])
 
-            payment_record.status = PaymentRecord.PENDING
-            payment_record.provider = "paystack"
-            payment_record.provider_reference = reference
-            payment_record.provider_payload = charge_response
-            payment_record.save(update_fields=["status", "provider", "provider_reference", "provider_payload"])
-    elif payload.payment_method == PaymentRecord.NGN_WALLET:
-        payment_record.status = PaymentRecord.VERIFIED
-        payment_record.provider_reference = f"wallet_{transaction.id}"
-        payment_record.user_confirmed_at = transaction.paid_at or timezone.now()
-        payment_record.verified_at = transaction.paid_at or timezone.now()
-        payment_record.save(update_fields=["status", "provider_reference", "user_confirmed_at", "verified_at"])
+        payment_record, _ = PaymentRecord.objects.get_or_create(
+            transaction=transaction,
+            defaults={
+                "method": payload.payment_method,
+                "provider": "paystack" if payload.payment_method == PaymentRecord.PAYSTACK else "wallet" if payload.payment_method == PaymentRecord.NGN_WALLET else "manual",
+            },
+        )
+        if payment_record.method != payload.payment_method:
+            payment_record.method = payload.payment_method
+            payment_record.provider = "paystack" if payload.payment_method == PaymentRecord.PAYSTACK else "wallet" if payload.payment_method == PaymentRecord.NGN_WALLET else "manual"
+            payment_record.save(update_fields=["method", "provider"])
+
+        if payload.payment_method == PaymentRecord.PAYSTACK:
+            if payment_record.status != PaymentRecord.VERIFIED:
+                try:
+                    reference = payment_record.provider_reference or _paystack_reference()
+                    metadata = {
+                        "transaction_id": str(transaction.id),
+                        "asset": transaction.asset_code,
+                        "crypto_amount": str(transaction.crypto_amount),
+                    }
+                    amount_kobo = _amount_to_kobo(transaction.naira_amount)
+                    charge_response = create_paystack_charge(
+                        email=transaction.user.email,
+                        amount_kobo=amount_kobo,
+                        reference=reference,
+                        metadata=metadata
+                    )
+                except ValidationError as e:
+                    return Response({"detail": str(e)}, status=400)
+
+                payment_record.status = PaymentRecord.PENDING
+                payment_record.provider = "paystack"
+                payment_record.provider_reference = reference
+                payment_record.provider_payload = charge_response
+                payment_record.save(update_fields=["status", "provider", "provider_reference", "provider_payload"])
+        elif payload.payment_method == PaymentRecord.NGN_WALLET:
+            payment_record.status = PaymentRecord.VERIFIED
+            payment_record.provider_reference = f"wallet_{transaction.id}"
+            payment_record.user_confirmed_at = transaction.paid_at or timezone.now()
+            payment_record.verified_at = transaction.paid_at or timezone.now()
+            payment_record.save(update_fields=["status", "provider_reference", "user_confirmed_at", "verified_at"])
 
     return payment_record
 
 
 def submit_bank_transfer(request, transaction_id, payload):
-    transaction = get_object_or_404(
-        Transaction,
-        id=transaction_id,
-        transaction_type=Transaction.BUY,
-        payment_method=Transaction.BANK_TRANSFER,
-    )
-    if transaction.user_id != request.auth.id:
-        return Response({"detail": "Transaction not found"}, status=404)
-    if transaction.status != Transaction.PENDING_PAYMENT:
-        return Response({"detail": "Transfer proof can only be submitted for pending payment transactions"}, status=400)
+    from broker.services import get_valid_quote
+    from rates.models import RateQuote
+    from django.db import transaction as db_transaction
 
-    payment_record, _ = PaymentRecord.objects.get_or_create(
-        transaction=transaction,
-        defaults={"method": PaymentRecord.BANK_TRANSFER, "provider": "manual"},
-    )
-    payment_record.status = PaymentRecord.PENDING_REVIEW
-    payment_record.receipt_reference = payload.receipt_reference.strip()
-    payment_record.receipt_url = payload.receipt_url.strip()
-    payment_record.receipt_note = (payload.receipt_note or "").strip()
-    payment_record.user_confirmed_at = timezone.now()
-    payment_record.save(
-        update_fields=["status", "receipt_reference", "receipt_url", "receipt_note", "user_confirmed_at"]
-    )
-    transition_transaction(transaction, Transaction.PENDING_REVIEW)
+    is_deferred = transaction_id.startswith("quote_")
+
+    with db_transaction.atomic():
+        if is_deferred:
+            quote_id = int(transaction_id.split("_")[1])
+            quote = get_valid_quote(quote_id, RateQuote.BUY)
+            transaction = Transaction.objects.create(
+                user=request.auth,
+                quote=quote,
+                transaction_type=Transaction.BUY,
+                asset=quote.asset,
+                status=Transaction.PENDING_PAYMENT,
+                payment_method=Transaction.BANK_TRANSFER,
+                naira_amount=quote.naira_amount,
+                crypto_amount=quote.crypto_amount,
+                market_rate=quote.market_rate,
+                markup_percent=quote.markup_percent,
+                final_rate=quote.final_rate,
+                crypto_usd_price=quote.crypto_usd_price,
+                crypto_source=Transaction.CRYPTO_SOURCE_EXTERNAL,
+                expires_at=timezone.now() + timedelta(hours=24),
+            )
+        else:
+            transaction = get_object_or_404(
+                Transaction,
+                id=transaction_id,
+                transaction_type=Transaction.BUY,
+                payment_method=Transaction.BANK_TRANSFER,
+            )
+            if transaction.user_id != request.auth.id:
+                return Response({"detail": "Transaction not found"}, status=404)
+            if transaction.status != Transaction.PENDING_PAYMENT:
+                return Response({"detail": "Transfer proof can only be submitted for pending payment transactions"}, status=400)
+
+        payment_record, _ = PaymentRecord.objects.get_or_create(
+            transaction=transaction,
+            defaults={"method": PaymentRecord.BANK_TRANSFER, "provider": "manual"},
+        )
+        payment_record.status = PaymentRecord.PENDING_REVIEW
+        payment_record.receipt_reference = payload.receipt_reference.strip()
+        payment_record.receipt_url = payload.receipt_url.strip()
+        payment_record.receipt_note = (payload.receipt_note or "").strip()
+        payment_record.user_confirmed_at = timezone.now()
+        payment_record.save(
+            update_fields=["status", "receipt_reference", "receipt_url", "receipt_note", "user_confirmed_at"]
+        )
+        transition_transaction(transaction, Transaction.PENDING_REVIEW)
+        
     return payment_record
 
 

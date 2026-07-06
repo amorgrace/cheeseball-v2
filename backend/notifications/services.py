@@ -97,7 +97,7 @@ def _send_notification_email(user, title: str, message: str, notification_type: 
     user_name = getattr(user, "full_name", None) or getattr(user, "first_name", None) or user.email.split("@")[0]
 
     is_kyc = notification_type in _KYC_CONFIGS or notification_type in (Notification.KYC_APPROVED, Notification.KYC_REJECTED)
-    template_name = "emails/kyc_notification.html" if is_kyc else "emails/activity_notification.html"
+    template_name = "emails/activity_notification.html" # Fallback (should be overridden by extra_context)
 
     # Default styled status pill and color tones for activity notifications
     style_defaults = {
@@ -206,8 +206,8 @@ def send_kyc_prompt_email(user):
         "help_text": "Need help? Contact support@cheeseballapp.com",
     }
     try:
-        html_body = render_to_string("emails/kyc_notification.html", context)
-        text_body = render_to_string("emails/activity_notification.txt", context)
+        html_body = render_to_string("emails/kyc_prompt.html", context)
+        text_body = render_to_string("emails/kyc_prompt.txt", context)
         msg = EmailMultiAlternatives(
             subject="[CheeseBall] Complete Your Identity Verification",
             body=text_body,

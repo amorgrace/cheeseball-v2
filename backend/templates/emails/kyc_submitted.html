@@ -1,193 +1,36 @@
-<!DOCTYPE html>
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<title>KYC Submitted — Under Review</title>
-<!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
-<style>
-  body,table,td,p,a,li,blockquote{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
-  table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;}
-  img{-ms-interpolation-mode:bicubic;border:0;outline:none;text-decoration:none;}
-  body{margin:0;padding:0;width:100%!important;}
-  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
-  body,.body-bg{background-color:#F7F9FF;}
-  .sora{font-family:'Sora',Helvetica,Arial,sans-serif;}
-  .dmsans{font-family:'DM Sans',Helvetica,Arial,sans-serif;}
-  a{color:#1A6FFF;text-decoration:none;}
-  .cta-btn:hover{background-color:#1259D9!important;}
-  @media only screen and (max-width:600px){.email-container{width:100%!important;}.fluid-padding{padding-left:20px!important;padding-right:20px!important;}}
-</style>
-</head>
-<body class="body-bg dmsans" style="margin:0;padding:0;background-color:#F7F9FF;">
-  <div style="display:none;max-height:0px;overflow:hidden;opacity:0;mso-hide:all;">Your identity documents have been submitted and are under review. This usually takes 24–48 hours.</div>
-  <div style="display:none;max-height:0px;overflow:hidden;opacity:0;">&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
+{% extends "emails/base.html" %}
+{% block title %}KYC Submitted — Cheeseball{% endblock %}
+{% block preheader %}We've received your identity verification documents. We'll review them shortly.{% endblock %}
 
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F7F9FF;">
-    <tr>
-      <td align="center" style="padding:40px 16px;">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="email-container" style="width:600px;max-width:600px;">
+{% block content %}
+<p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#d97706;text-transform:uppercase;letter-spacing:0.6px;">Under Review</p>
+<h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#0a0f1e;">KYC Submitted</h1>
+<p style="margin:0 0 24px;font-size:14px;color:#5a6478;line-height:1.65;">
+  We've received your identity verification documents. Our team will review them and get back to you within 24 hours.
+</p>
 
-          <tr>
-            <td align="center" style="padding-bottom:28px;">
-              <span class="sora" style="font-size:20px;font-weight:800;color:#0A0F1E;letter-spacing:-0.5px;">Cheese<span style="color:#1A6FFF;">ball</span></span>
-            </td>
-          </tr>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e5e8f0;border-radius:10px;margin-bottom:28px;">
+  <tr>
+    <td style="padding:16px 20px;border-bottom:1px solid #e5e8f0;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="font-size:13px;color:#5a6478;">Status</td>
+          <td align="right" style="font-size:13px;font-weight:600;color:#d97706;">Pending Review</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:16px 20px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="font-size:13px;color:#5a6478;">Review time</td>
+          <td align="right" style="font-size:13px;color:#0a0f1e;">Up to 24 hours</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
 
-          <tr>
-            <td style="background-color:#FFFFFF;border:1px solid #E8EEFF;border-radius:24px;overflow:hidden;">
-
-              <!-- Banner — Amber/pending -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td align="center" style="background-image:linear-gradient(135deg,#D97706 0%,#B45309 100%);padding:44px 32px 40px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                      <tr>
-                        <td align="center" style="width:64px;height:64px;background-color:rgba(255,255,255,0.18);border-radius:50%;padding:14px;">
-                          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:36px;height:36px;background-color:#FFFFFF;border-radius:50%;">
-                            <tr><td align="center" valign="middle" style="width:36px;height:36px;"><img src="https://img.icons8.com/fluency-systems-filled/48/D97706/clock--v1.png" width="20" height="20" alt="⏰" style="display:block;"></td></tr>
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;">
-                      <tr><td align="center" class="dmsans" style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:1.4px;padding-bottom:12px;">Identity Verification · Under Review</td></tr>
-                      <tr><td align="center" class="sora" style="font-size:26px;font-weight:700;color:#FFFFFF;letter-spacing:-0.5px;padding-bottom:12px;">Verification Submitted</td></tr>
-                      <tr><td align="center" class="dmsans" style="font-size:14px;color:rgba(255,255,255,0.7);line-height:1.6;">Your identity documents are being reviewed.<br>This usually takes <strong>24–48 hours</strong>.</td></tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Body -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td class="fluid-padding" style="padding:32px 40px 8px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                      <tr>
-                        <td style="background-color:#FFFBEB;border:1px solid #FCD34D;border-radius:20px;padding:6px 14px;">
-                          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                            <tr>
-                              <td style="width:7px;height:7px;background-color:#F59E0B;border-radius:50%;font-size:0;line-height:0;">&nbsp;</td>
-                              <td style="width:6px;font-size:0;">&nbsp;</td>
-                              <td class="dmsans" style="font-size:11px;font-weight:700;color:#92400E;text-transform:uppercase;letter-spacing:0.5px;">Under Review</td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <!-- What happens next -->
-                <tr>
-                  <td class="fluid-padding" style="padding:28px 40px 12px;">
-                    <span class="dmsans" style="font-size:11px;font-weight:700;color:#A8B4CC;text-transform:uppercase;letter-spacing:0.8px;">What happens next?</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="fluid-padding" style="padding:0 40px;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F7F9FF;border:1px solid #E8EEFF;border-radius:16px;">
-                      <!-- Step 1 -->
-                      <tr>
-                        <td style="padding:16px 20px 0;">
-                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                            <tr>
-                              <td valign="top" style="width:28px;">
-                                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:24px;height:24px;background-color:#1A6FFF;border-radius:50%;">
-                                  <tr><td align="center" valign="middle" class="sora" style="font-size:11px;font-weight:700;color:#FFFFFF;">1</td></tr>
-                                </table>
-                              </td>
-                              <td style="padding-left:12px;">
-                                <span class="sora" style="font-size:13px;font-weight:700;color:#0A0F1E;">Review in progress</span><br>
-                                <span class="dmsans" style="font-size:12px;color:#6B7A99;">Our team is reviewing your submitted documents.</span>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                      <tr><td style="padding:10px 20px 0;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid #E8EEFF;font-size:0;line-height:0;">&nbsp;</td></tr></table></td></tr>
-                      <!-- Step 2 -->
-                      <tr>
-                        <td style="padding:12px 20px 0;">
-                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                            <tr>
-                              <td valign="top" style="width:28px;">
-                                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:24px;height:24px;background-color:#E8EEFF;border-radius:50%;">
-                                  <tr><td align="center" valign="middle" class="sora" style="font-size:11px;font-weight:700;color:#6B7A99;">2</td></tr>
-                                </table>
-                              </td>
-                              <td style="padding-left:12px;">
-                                <span class="sora" style="font-size:13px;font-weight:700;color:#6B7A99;">Decision (24–48 hrs)</span><br>
-                                <span class="dmsans" style="font-size:12px;color:#6B7A99;">You'll receive an email once your verification is complete.</span>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                      <tr><td style="padding:10px 20px 0;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid #E8EEFF;font-size:0;line-height:0;">&nbsp;</td></tr></table></td></tr>
-                      <!-- Step 3 -->
-                      <tr>
-                        <td style="padding:12px 20px 16px;">
-                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                            <tr>
-                              <td valign="top" style="width:28px;">
-                                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:24px;height:24px;background-color:#E8EEFF;border-radius:50%;">
-                                  <tr><td align="center" valign="middle" class="sora" style="font-size:11px;font-weight:700;color:#6B7A99;">3</td></tr>
-                                </table>
-                              </td>
-                              <td style="padding-left:12px;">
-                                <span class="sora" style="font-size:13px;font-weight:700;color:#6B7A99;">Full access unlocked</span><br>
-                                <span class="dmsans" style="font-size:12px;color:#6B7A99;">After approval, all trading and withdrawal limits are removed.</span>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <tr>
-                  <td class="fluid-padding" align="center" style="padding:28px 40px 8px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-                      <tr>
-                        <td align="center" bgcolor="#1A6FFF" class="cta-btn" style="border-radius:14px;">
-                          <a href="{{ cta_url|default:'https://cheeseballapp.com/dashboard/kyc' }}" target="_blank" class="sora" style="display:block;padding:16px 32px;font-size:15px;font-weight:700;color:#FFFFFF;text-decoration:none;letter-spacing:0.2px;">Check KYC Status&nbsp;&nbsp;→</a>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-                <tr><td align="center" style="padding:14px 40px 36px;"><a href="https://cheeseballapp.com/dashboard" class="dmsans" style="font-size:13px;font-weight:600;color:#1A6FFF;">Go to dashboard →</a></td></tr>
-              </table>
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:20px 8px 0;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#EEF3FF;border-radius:16px;">
-                <tr>
-                  <td style="padding:16px 24px;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                      <tr>
-                        <td width="24" valign="top" style="padding-top:1px;"><img src="https://img.icons8.com/fluency-systems-regular/48/1A6FFF/info--v1.png" width="16" height="16" alt="i" style="display:block;"></td>
-                        <td class="dmsans" style="font-size:12.5px;color:#3B5AA8;line-height:1.6;padding-left:6px;">Please make sure your submitted documents are valid and clearly legible. If additional information is required, our team will contact you.</td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <tr><td align="center" style="padding:32px 24px 8px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding-right:6px;vertical-align:middle;"><img src="https://img.icons8.com/fluency-systems-filled/48/4ADE80/security-shield--v1.png" width="13" height="13" alt="" style="display:block;"></td><td class="dmsans" style="font-size:12px;color:#6B7A99;vertical-align:middle;">Your data is secure · <span style="color:#4ADE80;font-weight:600;">Protected by Cheeseball</span></td></tr></table></td></tr>
-          <tr><td align="center" style="padding:4px 24px 12px;"><span class="dmsans" style="font-size:12px;color:#A8B4CC;">Need help? <a href="https://cheeseballapp.com/dashboard/support" style="color:#1A6FFF;font-weight:600;">Contact support</a></span></td></tr>
-          <tr><td align="center" style="padding:12px 24px 40px;"><span class="dmsans" style="font-size:11px;color:#A8B4CC;text-align:center;line-height:1.7;">© 2026 Cheeseball. All rights reserved.<br>This is an automated message — please do not reply.</span></td></tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
+<p style="margin:0;font-size:13px;color:#9aa3b5;line-height:1.6;">You'll receive an email notification once your verification is complete. In the meantime, you can still use basic features of your account.</p>
+{% endblock %}

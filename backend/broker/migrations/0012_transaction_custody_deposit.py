@@ -8,13 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('broker', '0011_transaction_crypto_usd_price'),
-        ('nowpayments', '0001_initial'),
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='transaction',
-            name='custody_deposit',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='broker_transactions', to='nowpayments.custodydeposit'),
-        ),
     ]

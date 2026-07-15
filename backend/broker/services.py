@@ -653,34 +653,58 @@ def build_sell_transaction(*, user, payload):
 
         if crypto_source == Transaction.CRYPTO_SOURCE_EXTERNAL:
             broker_wallet_address = ""
-            quidax_wallet_address_obj = None
-            try:
-                from quidax.services import ensure_wallet_address
-                quidax_wallet_address_obj = ensure_wallet_address(
-                    user,
-                    currency=quote.asset.code,
-                    network=selected_network,
-                )
-                broker_wallet_address = quidax_wallet_address_obj.address
-            except Exception as exc:
-                logger.exception("Failed to create Quidax deposit wallet for sell — will use PENDING status")
-                from quidax.services import ensure_sub_account
-                from quidax.models import QuidaxWalletAddress, QuidaxSubAccount
+            crypto_provider = getattr(settings, "CRYPTO_PROVIDER", "quidax")
+
+            if crypto_provider == "hd_tatum":
                 try:
-                    sub_account = ensure_sub_account(user)
-                    quidax_wallet_address_obj, _ = QuidaxWalletAddress.objects.get_or_create(
-                        user=user,
-                        currency=quote.asset.code.upper(),
+                    from hd_wallets.services import derive_hd_deposit_address
+                    from tatum.services import create_tatum_address_subscription
+
+                    hd_address = derive_hd_deposit_address(
+                        user,
+                        currency=quote.asset.code,
                         network=selected_network,
-                        defaults={
-                            "sub_account": sub_account,
-                            "address": "",
-                            "status": QuidaxWalletAddress.PENDING,
-                            "provider_payload": {"error": str(exc)},
-                        },
                     )
+                    broker_wallet_address = hd_address.address
+                    try:
+                        create_tatum_address_subscription(hd_address)
+                    except Exception as sub_exc:
+                        logger.warning(
+                            "Tatum subscription failed for sell address %s: %s",
+                            hd_address.address, sub_exc,
+                        )
                 except Exception:
-                    logger.exception("Failed to create PENDING Quidax wallet address record")
+                    logger.exception("HD wallet address derivation failed for sell transaction")
+
+            else:
+                # Quidax path (default during dual-run)
+                try:
+                    from quidax.services import ensure_wallet_address
+                    quidax_wallet_address_obj = ensure_wallet_address(
+                        user,
+                        currency=quote.asset.code,
+                        network=selected_network,
+                    )
+                    broker_wallet_address = quidax_wallet_address_obj.address
+                except Exception as exc:
+                    logger.exception("Failed to create Quidax deposit wallet for sell — will use PENDING status")
+                    from quidax.services import ensure_sub_account
+                    from quidax.models import QuidaxWalletAddress, QuidaxSubAccount
+                    try:
+                        sub_account = ensure_sub_account(user)
+                        QuidaxWalletAddress.objects.get_or_create(
+                            user=user,
+                            currency=quote.asset.code.upper(),
+                            network=selected_network,
+                            defaults={
+                                "sub_account": sub_account,
+                                "address": "",
+                                "status": QuidaxWalletAddress.PENDING,
+                                "provider_payload": {"error": str(exc)},
+                            },
+                        )
+                    except Exception:
+                        logger.exception("Failed to create PENDING Quidax wallet address record")
 
             return _build_dummy_transaction(
                 quote=quote,
@@ -692,6 +716,7 @@ def build_sell_transaction(*, user, payload):
                 crypto_source=crypto_source,
                 broker_wallet_address=broker_wallet_address,
             )
+
 
         # --- Internal wallet: validate balance ---
         from wallets.services import get_user_wallet

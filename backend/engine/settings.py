@@ -58,6 +58,8 @@ INSTALLED_APPS = [
     "notifications",
     "transfers",
     "giftcards",
+    "hd_wallets",
+    "tatum",
 ]
 
 MIDDLEWARE = [
@@ -154,6 +156,45 @@ QUIDAX_SECRET_KEY = os.getenv("QUIDAX_SECRET_KEY", "")
 QUIDAX_WEBHOOK_SECRET = os.getenv("QUIDAX_WEBHOOK_SECRET", "")
 
 CRON_SECRET = os.getenv("CRON_SECRET", "")
+
+# ---------------------------------------------------------------------------
+# CRYPTO PROVIDER FEATURE FLAG
+# ---------------------------------------------------------------------------
+# Set to "hd_tatum" to use HD wallet + Tatum monitoring.
+# Set to "quidax" to keep the existing Quidax flow (default during dual-run).
+CRYPTO_PROVIDER = os.getenv("CRYPTO_PROVIDER", "hd_tatum")
+
+# ---------------------------------------------------------------------------
+# TATUM — monitoring only
+# ---------------------------------------------------------------------------
+TATUM_API_KEY = os.getenv("TATUM_API_KEY", "")
+TATUM_WEBHOOK_SECRET = os.getenv("TATUM_WEBHOOK_SECRET", "")
+TATUM_WEBHOOK_URL = os.getenv("TATUM_WEBHOOK_URL", "")
+TATUM_API_BASE_URL = os.getenv("TATUM_API_BASE_URL", "https://api.tatum.io/v3")
+
+# ---------------------------------------------------------------------------
+# HD WALLET — xpub keys per chain (public keys only — xpriv lives on signer)
+# ---------------------------------------------------------------------------
+HD_WALLET_XPUB_ETHEREUM = os.getenv("HD_WALLET_XPUB_ETHEREUM", "")
+HD_WALLET_XPUB_BSC = os.getenv("HD_WALLET_XPUB_BSC", "")
+HD_WALLET_XPUB_POLYGON = os.getenv("HD_WALLET_XPUB_POLYGON", "")
+HD_WALLET_XPUB_CELO = os.getenv("HD_WALLET_XPUB_CELO", "")
+HD_WALLET_XPUB_TRON = os.getenv("HD_WALLET_XPUB_TRON", "")
+HD_WALLET_XPUB_SOLANA = os.getenv("HD_WALLET_XPUB_SOLANA", "")
+HD_WALLET_XPUB_TON = os.getenv("HD_WALLET_XPUB_TON", "")
+
+# Master / hot wallet addresses (treasury sweep targets)
+MASTER_WALLET_ADDRESS_ETHEREUM = os.getenv("MASTER_WALLET_ADDRESS_ETHEREUM", "")
+MASTER_WALLET_ADDRESS_BSC = os.getenv("MASTER_WALLET_ADDRESS_BSC", "")
+MASTER_WALLET_ADDRESS_POLYGON = os.getenv("MASTER_WALLET_ADDRESS_POLYGON", "")
+MASTER_WALLET_ADDRESS_CELO = os.getenv("MASTER_WALLET_ADDRESS_CELO", "")
+MASTER_WALLET_ADDRESS_TRON = os.getenv("MASTER_WALLET_ADDRESS_TRON", "")
+MASTER_WALLET_ADDRESS_SOLANA = os.getenv("MASTER_WALLET_ADDRESS_SOLANA", "")
+MASTER_WALLET_ADDRESS_TON = os.getenv("MASTER_WALLET_ADDRESS_TON", "")
+
+# Signer service (handles private key access — NOT on Vercel)
+HD_WALLET_SIGNER_URL = os.getenv("HD_WALLET_SIGNER_URL", "")
+HD_WALLET_SIGNER_SECRET = os.getenv("HD_WALLET_SIGNER_SECRET", "")
 
 
 

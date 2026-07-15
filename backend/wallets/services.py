@@ -180,29 +180,44 @@ def create_withdrawal(user, asset: Asset, amount, bank_name="", bank_account_nam
         if not wallet_address:
             raise ValidationError("Wallet address is required for crypto withdrawals")
 
-        from quidax.services import initiate_crypto_withdrawal
         import logging
+        from django.conf import settings
         logger = logging.getLogger(__name__)
 
+        crypto_provider = getattr(settings, "CRYPTO_PROVIDER", "quidax")
+
         try:
-            quidax_response = initiate_crypto_withdrawal(
-                user,
-                currency=asset.code,
-                amount=amount,
-                fund_uid=wallet_address,
-                network=network
-            )
-            withdrawal.admin_notes = f"Quidax Tx: {quidax_response.get('id') or quidax_response}"
-            withdrawal.save(update_fields=["admin_notes"])
-            
+            if crypto_provider == "hd_tatum":
+                from hd_wallets.services import broadcast_on_chain_withdrawal
+                on_chain_withdrawal = broadcast_on_chain_withdrawal(
+                    user,
+                    currency=asset.code,
+                    amount=amount,
+                    to_address=wallet_address,
+                    network=network,
+                )
+                withdrawal.admin_notes = f"OnChain Tx: {on_chain_withdrawal.txid or on_chain_withdrawal.id}"
+                withdrawal.save(update_fields=["admin_notes"])
+            else:
+                from quidax.services import initiate_crypto_withdrawal
+                quidax_response = initiate_crypto_withdrawal(
+                    user,
+                    currency=asset.code,
+                    amount=amount,
+                    fund_uid=wallet_address,
+                    network=network
+                )
+                withdrawal.admin_notes = f"Quidax Tx: {quidax_response.get('id') or quidax_response}"
+                withdrawal.save(update_fields=["admin_notes"])
+
             complete_withdrawal(withdrawal)
-            
+
         except Exception as e:
-            logger.exception("Quidax crypto withdrawal failed")
+            logger.exception("Crypto withdrawal failed")
             withdrawal.rejection_reason = str(e)
             withdrawal.status = Withdrawal.FAILED
             withdrawal.save(update_fields=["rejection_reason", "status"])
-            
+
             # Send Telegram notification about failed crypto withdrawal
             try:
                 import html
@@ -221,8 +236,9 @@ def create_withdrawal(user, asset: Asset, amount, bank_name="", bank_account_nam
                 send_telegram_alert(telegram_msg)
             except Exception:
                 pass
-            
+
             raise ValidationError(f"External crypto withdrawal failed: {str(e)}")
+
     else:
         # Send Telegram notification for manual NGN withdrawal
         try:

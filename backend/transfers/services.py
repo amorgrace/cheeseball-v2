@@ -216,15 +216,29 @@ def _execute_external_transfer(*, sender, wallet, asset, amount, recipient_addre
     )
 
     try:
-        from quidax.services import initiate_crypto_withdrawal
-        quidax_response = initiate_crypto_withdrawal(
-            sender,
-            currency=asset.code,
-            amount=amount,
-            fund_uid=recipient_address,
-            network=recipient_network,
-        )
-        transfer.admin_notes = f"Quidax Tx: {quidax_response.get('id') or quidax_response}"
+        from django.conf import settings
+        crypto_provider = getattr(settings, "CRYPTO_PROVIDER", "quidax")
+
+        if crypto_provider == "hd_tatum":
+            from hd_wallets.services import broadcast_on_chain_withdrawal
+            on_chain_withdrawal = broadcast_on_chain_withdrawal(
+                sender,
+                currency=asset.code,
+                amount=amount,
+                to_address=recipient_address,
+                network=recipient_network,
+            )
+            transfer.admin_notes = f"OnChain Tx: {on_chain_withdrawal.txid or on_chain_withdrawal.id}"
+        else:
+            from quidax.services import initiate_crypto_withdrawal
+            quidax_response = initiate_crypto_withdrawal(
+                sender,
+                currency=asset.code,
+                amount=amount,
+                fund_uid=recipient_address,
+                network=recipient_network,
+            )
+            transfer.admin_notes = f"Quidax Tx: {quidax_response.get('id') or quidax_response}"
     except Exception as exc:
         logger.exception("Quidax withdrawal failed for transfer %s", transfer.id)
         transfer.status = CryptoTransfer.FAILED
@@ -283,21 +297,35 @@ def admin_approve_transfer(transfer: CryptoTransfer, admin_user) -> CryptoTransf
 
     from wallets.services import get_user_wallet
     from wallets.models import Ledger, PlatformReserve, ReserveMovement
-    from quidax.services import initiate_crypto_withdrawal
 
     with db_transaction.atomic():
         wallet = get_user_wallet(transfer.sender, transfer.asset)
 
-        # Call Quidax
+        # Call on-chain send
         try:
-            quidax_response = initiate_crypto_withdrawal(
-                transfer.sender,
-                currency=transfer.asset.code,
-                amount=transfer.amount,
-                fund_uid=transfer.recipient_address,
-                network=transfer.recipient_network,
-            )
-            notes = f"Quidax Tx: {quidax_response.get('id') or quidax_response}"
+            from django.conf import settings
+            crypto_provider = getattr(settings, "CRYPTO_PROVIDER", "quidax")
+
+            if crypto_provider == "hd_tatum":
+                from hd_wallets.services import broadcast_on_chain_withdrawal
+                on_chain_withdrawal = broadcast_on_chain_withdrawal(
+                    transfer.sender,
+                    currency=transfer.asset.code,
+                    amount=transfer.amount,
+                    to_address=transfer.recipient_address,
+                    network=transfer.recipient_network,
+                )
+                notes = f"OnChain Tx: {on_chain_withdrawal.txid or on_chain_withdrawal.id}"
+            else:
+                from quidax.services import initiate_crypto_withdrawal
+                quidax_response = initiate_crypto_withdrawal(
+                    transfer.sender,
+                    currency=transfer.asset.code,
+                    amount=transfer.amount,
+                    fund_uid=transfer.recipient_address,
+                    network=transfer.recipient_network,
+                )
+                notes = f"Quidax Tx: {quidax_response.get('id') or quidax_response}"
         except Exception as exc:
             logger.exception("Admin-approved Quidax withdrawal failed for transfer %s", transfer.id)
             raise ValidationError(f"On-chain send failed: {exc}")

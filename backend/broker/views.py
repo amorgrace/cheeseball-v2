@@ -42,10 +42,9 @@ def confirm_sell_crypto_sent(request, transaction_id: str):
     
     if is_deferred:
         from django.db import transaction as db_transaction
+        from django.conf import settings
         from broker.services import get_valid_quote
         from rates.models import RateQuote
-        from quidax.models import QuidaxWalletAddress
-        from quidax.services import create_pending_sell_deposit
         from django.utils import timezone
         from datetime import timedelta
         
@@ -71,21 +70,44 @@ def confirm_sell_crypto_sent(request, transaction_id: str):
                 payout_method=Transaction.PAYOUT_NGN_WALLET,
                 expires_at=timezone.now() + timedelta(hours=24),
             )
-            
-            quidax_addr = QuidaxWalletAddress.objects.filter(
-                user=request.auth, currency=quote.asset.code.upper()
-            ).order_by('-created_at').first()
-            
-            if quidax_addr:
-                transaction.broker_wallet_address = quidax_addr.address
-                transaction.network = quidax_addr.network
-                transaction.save(update_fields=["broker_wallet_address", "network"])
-                create_pending_sell_deposit(
-                    transaction_obj=transaction,
-                    wallet_address=quidax_addr
-                )
+
+            crypto_provider = getattr(settings, "CRYPTO_PROVIDER", "quidax")
+
+            if crypto_provider == "hd_tatum":
+                from hd_wallets.models import HdWalletAddress
+                from hd_wallets.services import create_pending_sell_on_chain_deposit
+
+                hd_addr = HdWalletAddress.objects.filter(
+                    user=request.auth, currency=quote.asset.code.upper()
+                ).order_by("-created_at").first()
+
+                if hd_addr:
+                    transaction.broker_wallet_address = hd_addr.address
+                    transaction.network = hd_addr.network
+                    transaction.save(update_fields=["broker_wallet_address", "network"])
+                    create_pending_sell_on_chain_deposit(
+                        transaction_obj=transaction,
+                        wallet_address=hd_addr,
+                    )
+            else:
+                from quidax.models import QuidaxWalletAddress
+                from quidax.services import create_pending_sell_deposit
+
+                quidax_addr = QuidaxWalletAddress.objects.filter(
+                    user=request.auth, currency=quote.asset.code.upper()
+                ).order_by('-created_at').first()
+                
+                if quidax_addr:
+                    transaction.broker_wallet_address = quidax_addr.address
+                    transaction.network = quidax_addr.network
+                    transaction.save(update_fields=["broker_wallet_address", "network"])
+                    create_pending_sell_deposit(
+                        transaction_obj=transaction,
+                        wallet_address=quidax_addr
+                    )
             
             return transition_transaction(transaction, Transaction.PENDING_REVIEW)
+
             
     else:
         transaction = get_object_or_404(Transaction, id=transaction_id, transaction_type=Transaction.SELL)

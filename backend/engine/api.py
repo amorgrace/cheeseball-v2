@@ -12,6 +12,7 @@ from rates.router import router as rates_router
 from notifications.router import router as notifications_router
 from wallets.router import router as wallets_router
 from transfers.router import router as transfers_router
+from tatum.router import router as tatum_router
 
 logger = logging.getLogger(__name__)
 
@@ -88,3 +89,4 @@ api.add_router("/notifications", notifications_router)
 api.add_router("/transfers", transfers_router)
 api.add_router("/giftcards", giftcards_router)
 api.add_router("/admin", admin_router)
+api.add_router("/tatum", tatum_router)  # HD wallet + Tatum monitoring (dual-run alongside quidax)

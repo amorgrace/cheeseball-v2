@@ -46,7 +46,10 @@ def _generate_reference_code(length: int = 10) -> str:
 
 
 def create_deposit(request, payload: DepositCreateSchema):
-    from quidax.services import ensure_wallet_address
+    import logging
+    from django.conf import settings
+
+    logger = logging.getLogger(__name__)
 
     asset = get_object_or_404(Asset, code=payload.asset)
 
@@ -59,36 +62,68 @@ def create_deposit(request, payload: DepositCreateSchema):
     # fall back to what is stored on the platform account / asset.
     network = (payload.network or platform_account.network or asset.network or "").strip()
 
-    # Generate (or retrieve cached) Quidax wallet address for this user
-    import logging
-    logger = logging.getLogger(__name__)
+    crypto_provider = getattr(settings, "CRYPTO_PROVIDER", "quidax")
 
-    try:
-        quidax_wallet = ensure_wallet_address(
-            request.auth,
-            currency=asset.code,
-            network=network,
-        )
-    except Exception as exc:
-        logger.exception("Failed to create Quidax deposit wallet for deposit — will use PENDING status")
-        from quidax.services import ensure_sub_account
-        from quidax.models import QuidaxWalletAddress
+    if crypto_provider == "hd_tatum":
+        # --- HD wallet + Tatum path ---
         try:
-            sub_account = ensure_sub_account(request.auth)
-            quidax_wallet, _ = QuidaxWalletAddress.objects.get_or_create(
-                user=request.auth,
-                currency=asset.code.upper(),
+            from hd_wallets.services import derive_hd_deposit_address
+            from tatum.services import create_tatum_address_subscription
+
+            hd_address = derive_hd_deposit_address(
+                request.auth,
+                currency=asset.code,
                 network=network,
-                defaults={
-                    "sub_account": sub_account,
-                    "address": "",
-                    "status": QuidaxWalletAddress.PENDING,
-                    "provider_payload": {"error": str(exc)},
-                },
             )
-        except Exception:
-            logger.exception("Failed to create PENDING Quidax wallet address record")
-            return Response({"detail": "Failed to initiate address generation"}, status=500)
+            # Ensure Tatum is monitoring this address (idempotent)
+            try:
+                create_tatum_address_subscription(hd_address)
+            except Exception as sub_exc:
+                logger.warning(
+                    "Tatum subscription failed for %s — continuing anyway: %s",
+                    hd_address.address, sub_exc,
+                )
+
+            deposit_address = hd_address.address
+            destination_tag = ""
+
+        except Exception as exc:
+            logger.exception("HD wallet address derivation failed for deposit")
+            return Response({"detail": f"Failed to generate deposit address: {exc}"}, status=500)
+
+    else:
+        # --- Quidax path (default during dual-run) ---
+        from quidax.services import ensure_wallet_address
+
+        try:
+            quidax_wallet = ensure_wallet_address(
+                request.auth,
+                currency=asset.code,
+                network=network,
+            )
+        except Exception as exc:
+            logger.exception("Failed to create Quidax deposit wallet for deposit — will use PENDING status")
+            from quidax.services import ensure_sub_account
+            from quidax.models import QuidaxWalletAddress
+            try:
+                sub_account = ensure_sub_account(request.auth)
+                quidax_wallet, _ = QuidaxWalletAddress.objects.get_or_create(
+                    user=request.auth,
+                    currency=asset.code.upper(),
+                    network=network,
+                    defaults={
+                        "sub_account": sub_account,
+                        "address": "",
+                        "status": QuidaxWalletAddress.PENDING,
+                        "provider_payload": {"error": str(exc)},
+                    },
+                )
+            except Exception:
+                logger.exception("Failed to create PENDING Quidax wallet address record")
+                return Response({"detail": "Failed to initiate address generation"}, status=500)
+
+        deposit_address = quidax_wallet.address
+        destination_tag = quidax_wallet.destination_tag
 
     # Generate unique reference code
     for _ in range(5):
@@ -112,12 +147,13 @@ def create_deposit(request, payload: DepositCreateSchema):
         "id": deposit.id,
         "asset": asset.code,
         "expected_amount": deposit.expected_amount,
-        "platform_address": quidax_wallet.address,
-        "reference_code": quidax_wallet.destination_tag or deposit.reference_code,
-        "network": network or quidax_wallet.network,
-        "memo_supported": memo_supported or bool(quidax_wallet.destination_tag),
+        "platform_address": deposit_address,
+        "reference_code": destination_tag or deposit.reference_code,
+        "network": network,
+        "memo_supported": memo_supported or bool(destination_tag),
         "created_at": deposit.created_at.isoformat(),
     }
+
 
 
 

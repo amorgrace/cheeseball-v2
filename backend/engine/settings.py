@@ -53,7 +53,6 @@ INSTALLED_APPS = [
     "wallets",
     "payments",
     "kyc",
-    "nowpayments",
     "quidax",
     "notifications",
     "transfers",
@@ -142,13 +141,6 @@ PAYSTACK_CHARGE_URL = os.getenv("PAYSTACK_CHARGE_URL", "https://api.paystack.co/
 PAYSTACK_BANK_TRANSFER_EXPIRES_MINUTES = int(os.getenv("PAYSTACK_BANK_TRANSFER_EXPIRES_MINUTES", "30"))
 PAYSTACK_TRANSFER_RECIPIENT_URL = os.getenv("PAYSTACK_TRANSFER_RECIPIENT_URL", "https://api.paystack.co/transferrecipient")
 PAYSTACK_TRANSFER_URL = os.getenv("PAYSTACK_TRANSFER_URL", "https://api.paystack.co/transfer")
-
-NOWPAYMENTS_API_BASE_URL = os.getenv("NOWPAYMENTS_API_BASE_URL", "https://api.nowpayments.io/v1")
-NOWPAYMENTS_API_KEY = os.getenv("NOWPAYMENTS_API_KEY", "")
-NOWPAYMENTS_IPN_SECRET = os.getenv("NOWPAYMENTS_IPN_SECRET", "")
-
-NOWPAYMENTS_EMAIL = os.getenv("NOWPAYMENTS_EMAIL", "")
-NOWPAYMENTS_PASSWORD = os.getenv("NOWPAYMENTS_PASSWORD", "")
 
 QUIDAX_API_BASE_URL = os.getenv("QUIDAX_API_BASE_URL", "https://openapi.quidax.io/exchange-open-api/api/v1")
 QUIDAX_API_KEY = os.getenv("QUIDAX_API_KEY", "")

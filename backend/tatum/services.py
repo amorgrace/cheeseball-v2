@@ -340,7 +340,7 @@ def _resolve_sell_intent(user, currency: str, amount: Decimal):
         .filter(
             user=user,
             transaction_type=Transaction.SELL,
-            status=Transaction.PENDING_PAYMENT,
+            status__in=[Transaction.PENDING_PAYMENT, Transaction.PENDING_REVIEW],
             asset__code=currency,
             crypto_amount=amount,
             expires_at__gt=timezone.now(),

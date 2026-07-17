@@ -61,7 +61,7 @@ def confirm_sell_crypto_sent(request, transaction_id: str):
                 user=request.auth,
                 transaction_type=Transaction.SELL,
                 asset=quote.asset,
-                status=Transaction.PENDING_PAYMENT,
+                status__in=[Transaction.PENDING_PAYMENT, Transaction.PENDING_REVIEW],
                 expires_at__gt=timezone.now(),
             ).exists()
             if active_sell:

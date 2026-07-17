@@ -295,23 +295,7 @@ def derive_hd_deposit_address(user, *, currency: str, network: str) -> HdWalletA
 # Deposit helpers
 # ---------------------------------------------------------------------------
 
-def create_pending_sell_on_chain_deposit(
-    *, transaction_obj, wallet_address: HdWalletAddress
-) -> OnChainDeposit:
-    """
-    Create a pending OnChainDeposit record linked to a broker sell transaction.
-    This is the HD-wallet equivalent of quidax.services.create_pending_sell_deposit.
-    """
-    return OnChainDeposit.objects.create(
-        user=transaction_obj.user,
-        wallet_address=wallet_address,
-        broker_transaction=transaction_obj,
-        currency=transaction_obj.asset.code.upper(),
-        network=transaction_obj.network,
-        amount=transaction_obj.crypto_amount,
-        status=OnChainDeposit.PENDING,
-        provider_payload={"source": "broker_sell_hd"},
-    )
+
 
 
 # ---------------------------------------------------------------------------

@@ -41,7 +41,7 @@ def get_transaction(request, transaction_id: str):
 
 def confirm_sell_crypto_sent(request, transaction_id: str):
     is_deferred = transaction_id.startswith("quote_")
-    
+
     if is_deferred:
         from django.db import transaction as db_transaction
         from django.conf import settings
@@ -49,11 +49,27 @@ def confirm_sell_crypto_sent(request, transaction_id: str):
         from rates.models import RateQuote
         from django.utils import timezone
         from datetime import timedelta
-        
+
         with db_transaction.atomic():
             quote_id = int(transaction_id.split("_")[1])
             quote = get_valid_quote(quote_id, RateQuote.SELL)
-            
+
+            # Guard: only one active sell session per asset per user.
+            # The Tatum webhook resolves intent by matching currency + amount to an
+            # active sell transaction, so having two at once would be ambiguous.
+            active_sell = Transaction.objects.filter(
+                user=request.auth,
+                transaction_type=Transaction.SELL,
+                asset=quote.asset,
+                status=Transaction.PENDING_PAYMENT,
+                expires_at__gt=timezone.now(),
+            ).exists()
+            if active_sell:
+                return Response(
+                    {"detail": "You already have an active sell session for this asset. Complete or wait for it to expire before starting a new one."},
+                    status=400,
+                )
+
             transaction = Transaction.objects.create(
                 user=request.auth,
                 quote=quote,
@@ -73,11 +89,13 @@ def confirm_sell_crypto_sent(request, transaction_id: str):
                 expires_at=timezone.now() + timedelta(hours=24),
             )
 
+            # Populate broker_wallet_address for display purposes (shown to user
+            # as "send your crypto here"). No OnChainDeposit pre-linking needed —
+            # intent is resolved by the Tatum webhook handler at detection time.
             crypto_provider = getattr(settings, "CRYPTO_PROVIDER", "quidax")
 
             if crypto_provider == "hd_tatum":
                 from hd_wallets.models import HdWalletAddress
-                from hd_wallets.services import create_pending_sell_on_chain_deposit
 
                 hd_addr = HdWalletAddress.objects.filter(
                     user=request.auth, currency=quote.asset.code.upper()
@@ -87,30 +105,20 @@ def confirm_sell_crypto_sent(request, transaction_id: str):
                     transaction.broker_wallet_address = hd_addr.address
                     transaction.network = hd_addr.network
                     transaction.save(update_fields=["broker_wallet_address", "network"])
-                    create_pending_sell_on_chain_deposit(
-                        transaction_obj=transaction,
-                        wallet_address=hd_addr,
-                    )
             else:
                 from quidax.models import QuidaxWalletAddress
-                from quidax.services import create_pending_sell_deposit
 
                 quidax_addr = QuidaxWalletAddress.objects.filter(
                     user=request.auth, currency=quote.asset.code.upper()
-                ).order_by('-created_at').first()
-                
+                ).order_by("-created_at").first()
+
                 if quidax_addr:
                     transaction.broker_wallet_address = quidax_addr.address
                     transaction.network = quidax_addr.network
                     transaction.save(update_fields=["broker_wallet_address", "network"])
-                    create_pending_sell_deposit(
-                        transaction_obj=transaction,
-                        wallet_address=quidax_addr
-                    )
-            
+
             return transition_transaction(transaction, Transaction.PENDING_REVIEW)
 
-            
     else:
         transaction = get_object_or_404(Transaction, id=transaction_id, transaction_type=Transaction.SELL)
         if transaction.user_id != request.auth.id:

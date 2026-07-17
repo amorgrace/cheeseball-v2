@@ -324,10 +324,39 @@ def process_tatum_webhook(payload: dict, *, signature: str = "") -> dict:
     return result
 
 
+def _resolve_sell_intent(user, currency: str, amount: Decimal):
+    """
+    Return the oldest active PENDING_PAYMENT sell Transaction whose crypto_amount
+    matches the incoming deposit exactly, or None if this should be a plain deposit.
+
+    Intent is resolved purely by database state at webhook time — no pre-linked
+    OnChainDeposit records are needed. If the user has no active sell session for
+    this asset + amount the crypto is treated as a wallet top-up instead.
+    """
+    from broker.models import Transaction
+
+    return (
+        Transaction.objects.select_for_update()
+        .filter(
+            user=user,
+            transaction_type=Transaction.SELL,
+            status=Transaction.PENDING_PAYMENT,
+            asset__code=currency,
+            crypto_amount=amount,
+            expires_at__gt=timezone.now(),
+        )
+        .order_by("created_at")  # FIFO — oldest active sell wins
+        .first()
+    )
+
+
 def handle_tatum_incoming_transfer(payload: dict) -> dict:
     """
     Process an ADDRESS_TRANSACTION or ADDRESS_TOKEN_TRANSACTION event.
-    Identifies the receiving HD address and credits the related broker transaction.
+
+    Intent is resolved at detection time:
+    - If an active sell Transaction matches the user + currency + amount → SELL
+    - Otherwise → plain wallet deposit
     """
     from hd_wallets.models import HdWalletAddress, OnChainDeposit
 
@@ -368,13 +397,19 @@ def handle_tatum_incoming_transfer(payload: dict) -> dict:
         logger.warning("Tatum webhook received for unknown address: %s", address)
         return {"message": "Tatum transfer ignored", "reason": f"unknown address: {address}"}
 
+    resolved_currency = currency or hd_address.currency
+
+    # Resolve intent: is there an active sell session waiting for this crypto?
+    sell_transaction = _resolve_sell_intent(hd_address.user, resolved_currency, amount)
+
     deposit = _find_or_create_on_chain_deposit(
         hd_address=hd_address,
-        currency=currency or hd_address.currency,
+        currency=resolved_currency,
         network=hd_address.network,
         amount=amount,
         txid=txid,
         payload=payload,
+        broker_transaction=sell_transaction,
     )
 
     if deposit.credited_at:
@@ -391,8 +426,16 @@ def handle_tatum_incoming_transfer(payload: dict) -> dict:
     deposit.save(update_fields=["status", "txid", "provider_payload", "credited_at", "updated_at"])
 
     if deposit.broker_transaction_id:
+        logger.info(
+            "Tatum deposit matched to sell transaction %s — advancing.",
+            deposit.broker_transaction_id,
+        )
         advance_sell_transaction_from_deposit(deposit)
     else:
+        logger.info(
+            "Tatum deposit for user=%s currency=%s — no active sell session, crediting wallet.",
+            hd_address.user.email, resolved_currency,
+        )
         _credit_wallet_for_standalone_deposit(deposit)
 
     return {
@@ -400,45 +443,39 @@ def handle_tatum_incoming_transfer(payload: dict) -> dict:
         "deposit_id": str(deposit.id),
         "currency": deposit.currency,
         "amount": str(amount),
+        "intent": "sell" if deposit.broker_transaction_id else "deposit",
         "credited": True,
     }
 
 
 def _find_or_create_on_chain_deposit(
-    *, hd_address, currency, network, amount, txid, payload
+    *, hd_address, currency, network, amount, txid, payload, broker_transaction=None
 ):
+    """
+    Find an existing OnChainDeposit for this txid/currency, or create a new one.
+    `broker_transaction` is resolved by the caller via _resolve_sell_intent and
+    linked at creation time — no pre-created pending records are needed.
+    """
     from hd_wallets.models import OnChainDeposit
 
-    # Prefer an existing match by txid
+    # Prefer an existing match by txid (idempotency)
     if txid:
         existing = OnChainDeposit.objects.select_for_update().filter(
             txid=txid, currency=currency
         ).first()
         if existing:
+            # If the existing deposit has no broker_transaction but we now resolved
+            # one (e.g. a second webhook retry after the sell session was created),
+            # update the link.
+            if broker_transaction and not existing.broker_transaction_id:
+                existing.broker_transaction = broker_transaction
+                existing.save(update_fields=["broker_transaction", "updated_at"])
             return existing
-
-    # Look for a matching pending deposit for this user / currency / amount
-    pending = (
-        OnChainDeposit.objects.select_for_update()
-        .filter(
-            user=hd_address.user,
-            currency=currency,
-            status=OnChainDeposit.PENDING,
-            amount=amount,
-        )
-        .order_by("created_at")
-        .first()
-    )
-    if pending:
-        if txid:
-            pending.txid = txid
-            pending.provider_payload = payload
-            pending.save(update_fields=["txid", "provider_payload", "updated_at"])
-        return pending
 
     return OnChainDeposit.objects.create(
         user=hd_address.user,
         wallet_address=hd_address,
+        broker_transaction=broker_transaction,
         currency=currency,
         network=network,
         amount=amount,

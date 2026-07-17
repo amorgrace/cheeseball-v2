@@ -27,6 +27,8 @@ def list_transactions(request):
     expire_stale_transactions()
 
     queryset = Transaction.objects.all() if request.auth.is_staff else Transaction.objects.filter(user=request.auth)
+    if not request.auth.is_staff:
+        queryset = queryset.filter(is_draft=False)
     return queryset.order_by("-created_at")
 
 

@@ -103,6 +103,7 @@ def setup_payment(request, payload):
                 final_rate=quote.final_rate,
                 crypto_usd_price=quote.crypto_usd_price,
                 crypto_source=Transaction.CRYPTO_SOURCE_EXTERNAL,
+                is_draft=True,
                 expires_at=timezone.now() + timedelta(hours=24),
             )
         else:
@@ -174,22 +175,47 @@ def submit_bank_transfer(request, transaction_id, payload):
         if is_deferred:
             quote_id = int(transaction_id.split("_")[1])
             quote = get_valid_quote(quote_id, RateQuote.BUY)
-            transaction = Transaction.objects.create(
-                user=request.auth,
-                quote=quote,
-                transaction_type=Transaction.BUY,
-                asset=quote.asset,
-                status=Transaction.PENDING_PAYMENT,
-                payment_method=Transaction.BANK_TRANSFER,
-                naira_amount=quote.naira_amount,
-                crypto_amount=quote.crypto_amount,
-                market_rate=quote.market_rate,
-                markup_percent=quote.markup_percent,
-                final_rate=quote.final_rate,
-                crypto_usd_price=quote.crypto_usd_price,
-                crypto_source=Transaction.CRYPTO_SOURCE_EXTERNAL,
-                expires_at=timezone.now() + timedelta(hours=24),
+
+            # Reuse the draft transaction that setup_payment already created for this quote.
+            # Lock the row for update to prevent a race condition from double-clicks.
+            transaction = (
+                Transaction.objects.select_for_update()
+                .filter(
+                    user=request.auth,
+                    quote_id=quote_id,
+                    transaction_type=Transaction.BUY,
+                    payment_method=Transaction.BANK_TRANSFER,
+                )
+                .first()
             )
+
+            if transaction is None:
+                # Fallback: user jumped straight to bank transfer without going through
+                # setup_payment first, so no draft exists yet. Create one now.
+                transaction = Transaction.objects.create(
+                    user=request.auth,
+                    quote=quote,
+                    transaction_type=Transaction.BUY,
+                    asset=quote.asset,
+                    status=Transaction.PENDING_PAYMENT,
+                    payment_method=Transaction.BANK_TRANSFER,
+                    naira_amount=quote.naira_amount,
+                    crypto_amount=quote.crypto_amount,
+                    market_rate=quote.market_rate,
+                    markup_percent=quote.markup_percent,
+                    final_rate=quote.final_rate,
+                    crypto_usd_price=quote.crypto_usd_price,
+                    crypto_source=Transaction.CRYPTO_SOURCE_EXTERNAL,
+                    expires_at=timezone.now() + timedelta(hours=24),
+                )
+
+            if transaction.status != Transaction.PENDING_PAYMENT:
+                # Guard against double-submission: if this transaction has already
+                # been moved to pending_review (or beyond), reject the duplicate.
+                return Response(
+                    {"detail": "Transfer proof has already been submitted for this transaction"},
+                    status=400,
+                )
         else:
             transaction = get_object_or_404(
                 Transaction,
@@ -206,6 +232,12 @@ def submit_bank_transfer(request, transaction_id, payload):
             transaction=transaction,
             defaults={"method": PaymentRecord.BANK_TRANSFER, "provider": "manual"},
         )
+        # If the payment record was already reviewed (double-click protection)
+        if payment_record.status == PaymentRecord.PENDING_REVIEW:
+            return Response(
+                {"detail": "Transfer proof has already been submitted for this transaction"},
+                status=400,
+            )
         payment_record.status = PaymentRecord.PENDING_REVIEW
         payment_record.receipt_reference = payload.receipt_reference.strip()
         payment_record.receipt_url = payload.receipt_url.strip()
@@ -214,8 +246,10 @@ def submit_bank_transfer(request, transaction_id, payload):
         payment_record.save(
             update_fields=["status", "receipt_reference", "receipt_url", "receipt_note", "user_confirmed_at"]
         )
+        transaction.is_draft = False
+        transaction.save(update_fields=["is_draft"])
         transition_transaction(transaction, Transaction.PENDING_REVIEW)
-        
+
     return payment_record
 
 
@@ -288,6 +322,8 @@ def paystack_webhook(request, payload, signature: str | None):
         payment_record.verified_at = timezone.now()
         payment_record.save(update_fields=["provider_payload", "user_confirmed_at", "status", "verified_at"])
         if transaction.status == Transaction.PENDING_PAYMENT:
+            transaction.is_draft = False
+            transaction.save(update_fields=["is_draft"])
             transition_transaction(transaction, Transaction.PAID)
             try_auto_complete_buy(transaction)
     elif event_name in {"charge.failed", "bank.transfer.rejected"} or status == "failed":

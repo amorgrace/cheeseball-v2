@@ -65,6 +65,7 @@ class Transaction(models.Model):
         to_field="code",
         db_column="asset",
     )
+    is_draft = models.BooleanField(default=False, help_text="Draft transactions are hidden from user history until action is taken.")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=PENDING_PAYMENT)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, null=True, blank=True)
     naira_amount = models.DecimalField(max_digits=20, decimal_places=2)

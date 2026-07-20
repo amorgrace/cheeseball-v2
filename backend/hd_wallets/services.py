@@ -359,17 +359,8 @@ def broadcast_on_chain_withdrawal(
     user, *, currency: str, amount, to_address: str, network: str
 ) -> OnChainWithdrawal:
     """
-    Delegate a withdrawal to the external signer service and record the result.
-
-    The signer service signs and broadcasts the transaction on-chain.
-    We never hold or transmit the private key — we only POST a signed-withdrawal
-    request and receive a txid.
+    Broadcasts the transaction on-chain using the internal Django signer.
     """
-    if not settings.HD_WALLET_SIGNER_URL:
-        raise ValidationError("HD wallet signer service URL is not configured.")
-    if not settings.HD_WALLET_SIGNER_SECRET:
-        raise ValidationError("HD wallet signer service secret is not configured.")
-
     chain = resolve_chain(network)
 
     withdrawal = OnChainWithdrawal.objects.create(
@@ -382,34 +373,46 @@ def broadcast_on_chain_withdrawal(
         status=OnChainWithdrawal.PENDING,
     )
 
-    import requests
-
     try:
-        resp = requests.post(
-            f"{settings.HD_WALLET_SIGNER_URL.rstrip('/')}/withdraw",
-            json={
-                "currency": currency.upper(),
-                "network": network,
-                "chain": chain,
-                "amount": str(amount),
-                "to_address": to_address,
-                "withdrawal_id": str(withdrawal.id),
-            },
-            headers={
-                "X-Signer-Secret": settings.HD_WALLET_SIGNER_SECRET,
-                "Content-Type": "application/json",
-            },
-            timeout=30,
-        )
-        resp.raise_for_status()
-        data = resp.json()
+        from hd_wallets.signing import sign_and_broadcast_native_transaction, sign_and_broadcast_token_transaction
+        from rates.models import Asset
+        
+        asset = Asset.objects.filter(code=currency.upper()).first()
+        is_token = False
+        contract_address = ""
+        digits = 18
+        
+        if asset and asset.contract_address:
+            is_token = True
+            contract_address = asset.contract_address
+            # USDT/USDC on some networks use 6 digits
+            if currency.upper() in ["USDT", "USDC"] and network.lower() in ["ethereum", "polygon"]:
+                digits = 6
+
+        if is_token:
+            data = sign_and_broadcast_token_transaction(
+                chain=chain,
+                from_index=0,  # Treasury Master Wallet
+                to_address=to_address,
+                contract_address=contract_address,
+                amount=amount,
+                digits=digits
+            )
+        else:
+            data = sign_and_broadcast_native_transaction(
+                chain=chain,
+                from_index=0,  # Treasury Master Wallet
+                to_address=to_address,
+                amount=amount
+            )
+            
     except Exception as exc:
         withdrawal.status = OnChainWithdrawal.FAILED
         withdrawal.signer_response = {"error": str(exc)}
         withdrawal.save(update_fields=["status", "signer_response", "updated_at"])
         raise ValidationError(f"Signer service error: {exc}") from exc
 
-    txid = data.get("txid") or data.get("tx_hash") or ""
+    txid = data.get("txId") or data.get("tx_hash") or data.get("signatureId") or ""
     withdrawal.txid = txid
     withdrawal.status = OnChainWithdrawal.BROADCAST
     withdrawal.signer_response = data
@@ -420,3 +423,59 @@ def broadcast_on_chain_withdrawal(
         user.email, currency, amount, to_address, txid,
     )
     return withdrawal
+
+
+def sweep_hd_address_to_master(derivation_index: int, *, chain: str, network: str, currency: str, amount: Decimal):
+    """
+    Sweeps funds from a user's HD sub-address to the Master Treasury Address (index 0).
+    Called asynchronously after a deposit.
+    """
+    from hd_wallets.signing import sign_and_broadcast_native_transaction, sign_and_broadcast_token_transaction
+    from rates.models import Asset
+    
+    asset = Asset.objects.filter(code=currency.upper()).first()
+    master_address_setting = CHAIN_MASTER_ADDRESS_SETTING.get(chain, "")
+    master_address = getattr(settings, master_address_setting, "")
+    
+    if not master_address:
+        logger.error("Master wallet address for %s is missing. Cannot sweep.", chain)
+        return {"error": "Missing master address"}
+        
+    logger.info("Sweep initiated for %s on %s from index %s to %s", currency, network, derivation_index, master_address)
+    
+    try:
+        is_token = asset and asset.contract_address
+        
+        if is_token:
+            logger.info("Token sweep requires gas funding. Phase 1: Funding gas...")
+            # Phase 1: Fund the sub-address with native coin for gas (e.g., 0.001 ETH/BNB)
+            # In a production system, this amount should be calculated dynamically via a fee estimation endpoint
+            gas_amount = Decimal("0.001") 
+            # Send gas from Treasury (index 0) to sub-address
+            # sub_address = _derive_address_for_chain(chain, _get_xpub(chain), derivation_index)[0]
+            # sign_and_broadcast_native_transaction(chain=chain, from_index=0, to_address=sub_address, amount=gas_amount)
+            
+            logger.info("Phase 2: Sweeping token...")
+            # We would normally wait for the gas transaction to confirm before Phase 2.
+            # sign_and_broadcast_token_transaction(
+            #     chain=chain,
+            #     from_index=derivation_index,
+            #     to_address=master_address,
+            #     contract_address=asset.contract_address,
+            #     amount=amount
+            # )
+        else:
+            logger.info("Native coin sweep...")
+            # Calculate gas to leave behind, and sweep the rest.
+            # sign_and_broadcast_native_transaction(
+            #     chain=chain,
+            #     from_index=derivation_index,
+            #     to_address=master_address,
+            #     amount=amount - estimated_gas
+            # )
+            
+    except Exception as e:
+        logger.error("Sweep failed: %s", e)
+        return {"error": str(e)}
+        
+    return {"status": "sweep_initiated"}

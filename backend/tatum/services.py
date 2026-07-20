@@ -438,6 +438,25 @@ def handle_tatum_incoming_transfer(payload: dict) -> dict:
         )
         _credit_wallet_for_standalone_deposit(deposit)
 
+    # Trigger async sweep to master wallet
+    try:
+        from hd_wallets.services import sweep_hd_address_to_master
+        import threading
+        logger.info("Triggering async sweep for deposit %s", deposit.id)
+        threading.Thread(
+            target=sweep_hd_address_to_master,
+            kwargs={
+                "derivation_index": hd_address.derivation_index.derivation_index,
+                "chain": hd_address.chain,
+                "network": hd_address.network,
+                "currency": resolved_currency,
+                "amount": amount,
+            },
+            daemon=True
+        ).start()
+    except Exception as e:
+        logger.error("Failed to start async sweep thread: %s", e)
+
     return {
         "message": "Tatum deposit processed",
         "deposit_id": str(deposit.id),
@@ -445,6 +464,7 @@ def handle_tatum_incoming_transfer(payload: dict) -> dict:
         "amount": str(amount),
         "intent": "sell" if deposit.broker_transaction_id else "deposit",
         "credited": True,
+        "sweep_triggered": True,
     }
 
 

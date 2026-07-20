@@ -291,49 +291,31 @@ async def login_user(request, payload: LoginSchema):
 
     access = await sync_to_async(AccessToken.for_user)(user)
 
-    if user.is_staff or user.is_superuser:
+    if not (user.is_staff or user.is_superuser):
+        # Security alert email — fire and forget
         try:
-            import html
-            from django.utils import timezone as _tz
-            from notifications.telegram import send_telegram_alert
+            from notifications.services import notify
+            from notifications.models import Notification
             _ua = request.headers.get("User-Agent", "Unknown device")[:120]
             _device = _ua if _ua != "Unknown device" else "Unknown device"
-            _ts = _tz.now().strftime("%Y-%m-%d %H:%M UTC")
-            telegram_msg = (
-                f"🔐 <b>ADMIN LOGIN DETECTED</b>\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"👤 Admin: {html.escape(user.email)}\n"
-                f"🖥️ Device: {html.escape(_device)}\n"
-                f"⏰ {_ts}"
+            _fdate = timezone.localtime(timezone.now()).strftime("%m/%d/%Y, %I:%M %p")
+            await sync_to_async(notify)(
+                user,
+                title="New Login Detected",
+                message=f"A new login was detected on your Cheeseball account from: {_device}",
+                notification_type=Notification.GENERAL,
+                extra_context={
+                    "template_name": "emails/security_alert.html",
+                    "text_template_name": "emails/security_alert.txt",
+                    "alert_type": "New Login Detected",
+                    "device": _device,
+                    "formatted_date": _fdate,
+                    "secure_url": "https://cheeseballapp.com/auth/reset-password",
+                    "cta_url": "https://cheeseballapp.com/dashboard",
+                },
             )
-            send_telegram_alert(telegram_msg)
         except Exception:
             pass
-
-    # Security alert email — fire and forget
-    try:
-        from notifications.services import notify
-        from notifications.models import Notification
-        _ua = request.headers.get("User-Agent", "Unknown device")[:120]
-        _device = _ua if _ua != "Unknown device" else "Unknown device"
-        _fdate = timezone.localtime(timezone.now()).strftime("%m/%d/%Y, %I:%M %p")
-        await sync_to_async(notify)(
-            user,
-            title="New Login Detected",
-            message=f"A new login was detected on your Cheeseball account from: {_device}",
-            notification_type=Notification.GENERAL,
-            extra_context={
-                "template_name": "emails/security_alert.html",
-                "text_template_name": "emails/security_alert.txt",
-                "alert_type": "New Login Detected",
-                "device": _device,
-                "formatted_date": _fdate,
-                "secure_url": "https://cheeseballapp.com/auth/reset-password",
-                "cta_url": "https://cheeseballapp.com/dashboard",
-            },
-        )
-    except Exception:
-        pass
 
     return auth_success_response(
         message="Login successful",
